@@ -63,6 +63,29 @@ export async function seedClient(db: SupabaseClient<Database>, name = "Test Clie
   return data;
 }
 
+export async function seedPackageTemplate(
+  db: SupabaseClient<Database>,
+  params: {
+    zone_id: string;
+    name: string;
+    default_sessions: number;
+    price: number;
+  },
+) {
+  const { data, error } = await db
+    .from("package_templates")
+    .insert({
+      zone_id: params.zone_id,
+      name: params.name,
+      default_sessions: params.default_sessions,
+      price: params.price,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function seedClientPackage(
   db: SupabaseClient<Database>,
   params: {

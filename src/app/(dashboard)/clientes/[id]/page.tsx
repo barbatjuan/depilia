@@ -8,6 +8,11 @@ import {
   getClientPackages,
 } from "@/features/clients/data/client-ficha";
 import { summarizeClientPackages } from "@/features/clients/domain/client-packages";
+import {
+  listActiveBodyZones,
+  listActivePackageTemplates,
+} from "@/features/packages/data/package-templates";
+import { PackageSaleActions } from "@/features/packages/components/package-sale-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,10 +56,14 @@ export default async function ClienteFichaPage({
   const client = await getClient(supabase, id);
   if (!client) notFound();
 
-  const [packages, appointments] = await Promise.all([
-    getClientPackages(supabase, id),
-    getClientAppointments(supabase, id),
-  ]);
+  const [packages, appointments, packageTemplates, zones] = await Promise.all(
+    [
+      getClientPackages(supabase, id),
+      getClientAppointments(supabase, id),
+      listActivePackageTemplates(supabase),
+      listActiveBodyZones(supabase),
+    ],
+  );
   const packageSummaries = summarizeClientPackages(packages);
   const activePackages = packageSummaries.filter((p) => p.status === "active");
   const pastPackages = packageSummaries.filter((p) => p.status === "completed");
@@ -80,12 +89,19 @@ export default async function ClienteFichaPage({
             {!client.phone && !client.email ? "Sin datos de contacto" : null}
           </div>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/clientes/${id}/editar`}>
-            <Pencil className="size-4" />
-            Editar
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PackageSaleActions
+            clientId={id}
+            templates={packageTemplates}
+            zones={zones}
+          />
+          <Button variant="outline" asChild>
+            <Link href={`/clientes/${id}/editar`}>
+              <Pencil className="size-4" />
+              Editar
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {client.notes ? (

@@ -1,0 +1,72 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient as createSupabaseClient } from "@/lib/supabase/server";
+import { sellPackageSchema } from "@/features/packages/schema";
+import { buildPackageSalePayload } from "@/features/packages/domain/sell-package";
+import { listActivePackageTemplates } from "@/features/packages/data/package-templates";
+import { sellPackage } from "@/features/packages/data/sell-package";
+
+export type SellPackageFormState = { error: string | null };
+
+/**
+ * Server action backing the "vender paquete" ficha form. Bound with the
+ * client id via `.bind(null, clientId)`. Re-validates with
+ * `sellPackageSchema` server-side (the real boundary), resolves either the
+ * chosen catalog template or the ad-hoc zone/count/price into a payload,
+ * then persists the `client_packages` + `sales` rows.
+ */
+export async function sellPackageAction(
+  clientId: string,
+  _prevState: SellPackageFormState,
+  formData: FormData,
+): Promise<SellPackageFormState> {
+  const parsed = sellPackageSchema.safeParse({
+    clientId,
+    templateId: formData.get("templateId"),
+    zoneId: formData.get("zoneId"),
+    sessionCount: formData.get("sessionCount"),
+    price: formData.get("price"),
+  });
+
+  if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    const message =
+      flat.formErrors[0] ??
+      Object.values(flat.fieldErrors)[0]?.[0] ??
+      "Revisá los datos del paquete.";
+    return { error: message };
+  }
+
+  const supabase = await createSupabaseClient();
+
+  try {
+    let payload;
+    if (parsed.data.templateId) {
+      const templates = await listActivePackageTemplates(supabase);
+      const template = templates.find((t) => t.id === parsed.data.templateId);
+      if (!template) {
+        return { error: "El paquete seleccionado ya no está disponible." };
+      }
+      payload = buildPackageSalePayload({ source: "template", template });
+    } else {
+      const zoneId = parsed.data.zoneId as string;
+      const zoneName =
+        formData.get("zoneName")?.toString() || "Zona seleccionada";
+      payload = buildPackageSalePayload({
+        source: "custom",
+        zoneId,
+        zoneName,
+        sessionCount: Number(parsed.data.sessionCount),
+        price: Number(parsed.data.price),
+      });
+    }
+
+    await sellPackage(supabase, { clientId, payload });
+  } catch {
+    return { error: "No se pudo registrar la venta del paquete." };
+  }
+
+  revalidatePath(`/clientes/${clientId}`);
+  return { error: null };
+}
