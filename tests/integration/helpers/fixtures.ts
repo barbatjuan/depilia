@@ -109,6 +109,23 @@ export async function seedClientPackage(
   return data;
 }
 
+export async function seedLooseSale(
+  db: SupabaseClient<Database>,
+  params: { client_id: string; description?: string; total?: number },
+) {
+  const { data, error } = await db
+    .from("sales")
+    .insert({
+      client_id: params.client_id,
+      description: params.description ?? "Sesión suelta — Test",
+      total: params.total ?? 15000,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function seedAppointment(
   db: SupabaseClient<Database>,
   params: {
