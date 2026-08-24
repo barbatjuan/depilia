@@ -1,0 +1,14 @@
+node_modules
+.next
+.vercel
+out
+coverage
+playwright-report
+test-results
+.env
+.env.local
+*.local
+.DS_Store
+*.tsbuildinfo
+supabase/.branches
+supabase/.temp
