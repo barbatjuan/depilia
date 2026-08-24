@@ -10,21 +10,28 @@ export function KpiCard({
   label,
   value,
   icon: Icon,
+  hint,
 }: {
   label: string;
   value: string | number;
   icon: LucideIcon;
+  hint?: string;
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <Card className="gap-3 py-5 shadow-sm transition-shadow hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5">
+        <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {label}
         </CardTitle>
-        <Icon className="size-4 text-muted-foreground" />
+        <span className="flex size-8 items-center justify-center rounded-full bg-brand-muted">
+          <Icon className="size-4 text-brand" />
+        </span>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="px-5">
+        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        {hint ? (
+          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        ) : null}
       </CardContent>
     </Card>
   );

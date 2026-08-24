@@ -31,6 +31,9 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --brand: oklch(0.53 0.19 291);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-muted: oklch(0.94 0.03 291);
 }
 
 .dark {
@@ -60,6 +63,9 @@
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --brand: oklch(0.72 0.17 291);
+  --brand-foreground: oklch(0.145 0 0);
+  --brand-muted: oklch(0.3 0.06 291);
 }
 
 @theme inline {
@@ -93,6 +99,9 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
 }
 
 @layer base {
