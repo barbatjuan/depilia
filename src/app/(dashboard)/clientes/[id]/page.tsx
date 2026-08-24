@@ -13,6 +13,8 @@ import {
   listActivePackageTemplates,
 } from "@/features/packages/data/package-templates";
 import { PackageSaleActions } from "@/features/packages/components/package-sale-actions";
+import { listSales } from "@/features/sales/data/sales";
+import { SaleStatusBadge } from "@/features/sales/components/sale-status-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,6 +29,12 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
   dateStyle: "medium",
   timeStyle: "short",
+});
+
+const currencyFormatter = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 0,
 });
 
 const APPOINTMENT_STATUS_LABEL: Record<string, string> = {
@@ -56,14 +64,14 @@ export default async function ClienteFichaPage({
   const client = await getClient(supabase, id);
   if (!client) notFound();
 
-  const [packages, appointments, packageTemplates, zones] = await Promise.all(
-    [
+  const [packages, appointments, packageTemplates, zones, sales] =
+    await Promise.all([
       getClientPackages(supabase, id),
       getClientAppointments(supabase, id),
       listActivePackageTemplates(supabase),
       listActiveBodyZones(supabase),
-    ],
-  );
+      listSales(supabase, { clientId: id }),
+    ]);
   const packageSummaries = summarizeClientPackages(packages);
   const activePackages = packageSummaries.filter((p) => p.status === "active");
   const pastPackages = packageSummaries.filter((p) => p.status === "completed");
@@ -169,6 +177,47 @@ export default async function ClienteFichaPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Ventas</CardTitle>
+            <CardDescription>
+              Historial de ventas y pagos de este cliente
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/ventas?clientId=${id}`}>Ver todas</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {sales.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Sin ventas registradas todavía.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {sales.map((sale) => (
+                <li key={sale.id}>
+                  <Link
+                    href={`/ventas/${sale.id}`}
+                    className="flex items-center justify-between rounded-md border p-3 hover:bg-accent"
+                  >
+                    <div>
+                      <p className="font-medium">{sale.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {dateFormatter.format(new Date(sale.soldAt))} —{" "}
+                        {currencyFormatter.format(sale.balance.total)}
+                      </p>
+                    </div>
+                    <SaleStatusBadge status={sale.balance.status} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
