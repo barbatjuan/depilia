@@ -1,11 +1,23 @@
 import { z } from "zod";
 
 const uuid = z.string().uuid();
-const optionalUuid = z.union([z.literal(""), uuid]).optional().default("");
+// `.nullish()` (not `.optional()`) because the "sell a package" form only
+// renders the `zoneId`/`sessionCount`/`price` hidden inputs when the admin
+// picked the ad-hoc/custom path — when a catalog template is selected
+// instead, those inputs are absent from the DOM entirely, so
+// `formData.get(...)` returns `null`, not `undefined`. `.optional()` alone
+// only tolerates `undefined` and rejects `null`, which made a real template
+// sale fail schema validation (caught by the E2E golden path, not by any
+// unit/integration test — those exercised the domain/data layers directly,
+// never a real `FormData` built the way a browser actually builds one).
+const optionalUuid = z
+  .union([z.literal(""), uuid])
+  .nullish()
+  .transform((value) => value ?? "");
 const optionalNumeric = z
   .union([z.literal(""), z.coerce.number()])
-  .optional()
-  .default("");
+  .nullish()
+  .transform((value) => value ?? "");
 
 /**
  * "Sell a package" form/action schema (spec: "package-sessions / Sell a

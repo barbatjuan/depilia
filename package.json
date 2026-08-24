@@ -14,6 +14,7 @@
     "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "e2e:reset": "supabase db reset",
     "verify": "pnpm lint && pnpm typecheck && vitest run && playwright test"
   },
   "dependencies": {

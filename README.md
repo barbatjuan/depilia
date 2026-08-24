@@ -34,8 +34,24 @@ values ('<auth.users.id of your local dev user>', 'Admin');
 | `pnpm test:unit` | Unit project only (no DB required) |
 | `pnpm test:integration` | Integration project only (requires `supabase start`) |
 | `pnpm e2e` | Playwright e2e |
+| `pnpm e2e:reset` | Reset the local Supabase stack (`supabase db reset`) before an e2e run |
 | `pnpm verify` | lint + typecheck + vitest + playwright |
 
 Integration tests hit a real local Postgres — locks, triggers, and constraints are
 never mocked. If Docker/`supabase start` is unavailable, `pnpm test:integration` fails
 loudly rather than skipping silently.
+
+## E2E (`pnpm e2e`)
+
+`e2e/golden-path.spec.ts` drives the full MVP flow through the real UI against the
+local Supabase stack: login → create a client → sell a package → book an
+appointment against it → complete the appointment → verify the package's
+remaining-sessions count decremented by exactly 1 → register a payment → verify
+the balance owed → create an expense → verify the dashboard KPIs.
+
+A Playwright `globalSetup` (`e2e/global-setup.ts`) seeds the two fixtures no UI
+screen in this MVP can create — the local admin auth user + `staff` row the
+suite logs in as, and one active `package_templates` catalog row — using the
+Supabase service-role admin API, idempotently. Requires `npx supabase start`
+running. `pnpm e2e:reset` (`supabase db reset`) gives a clean slate first if
+you want one; it is optional, not required, since global setup is idempotent.

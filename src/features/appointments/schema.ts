@@ -16,7 +16,15 @@ export const createAppointmentSchema = z
       .number()
       .int()
       .positive("La duración debe ser mayor a 0."),
-    notes: z.string().optional().default(""),
+    // `.nullish()` (not `.optional()`) — the booking form renders no
+    // `notes` input at all, so `formData.get("notes")` is `null`, not
+    // `undefined`; `.optional()` alone rejects `null` (same class of bug
+    // fixed in `features/packages/schema.ts`'s `optionalUuid`/
+    // `optionalNumeric`, caught by the same E2E golden path run).
+    notes: z
+      .string()
+      .nullish()
+      .transform((value) => value ?? ""),
     clientPackageId: z
       .union([z.literal(""), z.string().uuid()])
       .optional()
