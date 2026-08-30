@@ -11,7 +11,9 @@ export async function listActivePackageTemplates(
 ): Promise<PackageTemplateOption[]> {
   const { data, error } = await supabase
     .from("package_templates")
-    .select("id, zone_id, name, default_sessions, price, body_zones(name)")
+    .select(
+      "id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, body_zones(name)",
+    )
     .eq("active", true)
     .order("name", { ascending: true });
   if (error) throw error;
@@ -21,8 +23,11 @@ export async function listActivePackageTemplates(
     zoneId: row.zone_id,
     zoneName: row.body_zones?.name ?? "Zona desconocida",
     name: row.name,
+    gender: row.gender as PackageTemplateOption["gender"],
+    sizeCategory: row.size_category as PackageTemplateOption["sizeCategory"],
     defaultSessions: row.default_sessions,
-    price: row.price,
+    sessionPrice: row.session_price,
+    bonoPrice: row.bono_price,
   }));
 }
 

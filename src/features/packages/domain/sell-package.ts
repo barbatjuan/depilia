@@ -1,10 +1,21 @@
+export type Gender = "mujer" | "hombre";
+export type SizeCategory =
+  | "mini"
+  | "pequena"
+  | "mediana"
+  | "grande"
+  | "cuerpo";
+
 export type PackageTemplateOption = {
   id: string;
   zoneId: string;
   zoneName: string;
   name: string;
+  gender: Gender;
+  sizeCategory: SizeCategory;
   defaultSessions: number;
-  price: number;
+  sessionPrice: number;
+  bonoPrice: number;
 };
 
 export type PackageSaleRequest =
@@ -41,7 +52,7 @@ export function buildPackageSalePayload(
       templateId: template.id,
       zoneId: template.zoneId,
       totalSessions: template.defaultSessions,
-      price: template.price,
+      price: template.bonoPrice,
       description: `Paquete ${template.name} — ${template.defaultSessions} sesiones (${template.zoneName})`,
     };
   }

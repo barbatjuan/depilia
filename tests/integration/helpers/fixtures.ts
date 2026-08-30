@@ -106,8 +106,11 @@ export async function seedPackageTemplate(
   params: {
     zone_id: string;
     name: string;
+    gender?: "mujer" | "hombre";
+    size_category?: "mini" | "pequena" | "mediana" | "grande" | "cuerpo";
     default_sessions: number;
-    price: number;
+    session_price?: number;
+    bono_price: number;
   },
 ) {
   const { data, error } = await db
@@ -115,8 +118,12 @@ export async function seedPackageTemplate(
     .insert({
       zone_id: params.zone_id,
       name: params.name,
+      gender: params.gender ?? "mujer",
+      size_category: params.size_category ?? "mediana",
       default_sessions: params.default_sessions,
-      price: params.price,
+      session_price:
+        params.session_price ?? Math.round((params.bono_price / 6) * 100) / 100,
+      bono_price: params.bono_price,
     })
     .select()
     .single();

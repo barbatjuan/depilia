@@ -65,27 +65,29 @@ async function main() {
   console.log("• transactional tables cleared");
 
   // 2. Body zones — find-or-create (the vitest suite truncates catalog
-  //    tables, so we can't assume the migration seed survived).
-  for (const name of ["underarms", "legs", "bikini", "face", "back"]) {
-    await db.from("body_zones").upsert({ name }, { onConflict: "name" });
+  //    tables, so we can't assume the migration seed survived). Real Spanish
+  //    tariff areas: the 5 English demo zones from 0010 are archived by
+  //    migration 0012.
+  const serviceSpecs = [
+    { name: "Piernas completas", gender: "mujer", size_category: "grande", session_price: 40, bono_price: 210, default_sessions: 6 },
+    { name: "Axilas", gender: "mujer", size_category: "pequena", session_price: 10, bono_price: 48, default_sessions: 6 },
+    { name: "Facial Completo", gender: "mujer", size_category: "mediana", session_price: 15, bono_price: 78, default_sessions: 6 },
+    { name: "Muslos", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6 },
+    { name: "Media espalda", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6 },
+  ];
+  for (const s of serviceSpecs) {
+    await db.from("body_zones").upsert({ name: s.name }, { onConflict: "name" });
   }
   const { data: zones, error: zonesErr } = await db.from("body_zones").select("id, name");
   die("load body_zones", zonesErr);
   const zoneId = Object.fromEntries(zones.map((z) => [z.name, z.id]));
 
   // 3. Servicios / package templates. Find-or-create by name.
-  const serviceSpecs = [
-    { name: "Piernas completas", zone: "legs", default_sessions: 6, price: 45000 },
-    { name: "Axilas", zone: "underarms", default_sessions: 6, price: 18000 },
-    { name: "Rostro completo", zone: "face", default_sessions: 4, price: 22000 },
-    { name: "Bikini full", zone: "bikini", default_sessions: 6, price: 30000 },
-    { name: "Espalda", zone: "back", default_sessions: 5, price: 35000 },
-  ];
   const templates = [];
   for (const s of serviceSpecs) {
     const { data: existing } = await db
       .from("package_templates")
-      .select("id, name, default_sessions, price")
+      .select("id, name, default_sessions, bono_price")
       .eq("name", s.name)
       .maybeSingle();
     if (existing) {
@@ -95,13 +97,16 @@ async function main() {
     const { data, error } = await db
       .from("package_templates")
       .insert({
-        zone_id: zoneId[s.zone],
+        zone_id: zoneId[s.name],
         name: s.name,
+        gender: s.gender,
+        size_category: s.size_category,
         default_sessions: s.default_sessions,
-        price: s.price,
+        session_price: s.session_price,
+        bono_price: s.bono_price,
         active: true,
       })
-      .select("id, name, default_sessions, price")
+      .select("id, name, default_sessions, bono_price")
       .single();
     die(`insert template ${s.name}`, error);
     templates.push(data);
@@ -154,9 +159,7 @@ async function main() {
       packaged.map((p) => ({
         client_id: p.client_id,
         template_id: p.template_id,
-        zone_id: templates.find((t) => t.id === p.template_id)
-          ? zoneId[serviceSpecs.find((s) => s.name === p.template.name).zone]
-          : zoneId.legs,
+        zone_id: zoneId[p.template.name] ?? zoneId[serviceSpecs[0].name],
         total_sessions: p.total_sessions,
         sessions_used: 0,
       })),
@@ -244,7 +247,7 @@ async function main() {
   let paymentCount = 0;
 
   for (const p of packaged) {
-    const total = Number(p.template.price);
+    const total = Number(p.template.bono_price);
     const soldDay = rand(1, Math.max(1, todayDay - 1));
     const { data: sale, error: saleErr } = await db
       .from("sales")

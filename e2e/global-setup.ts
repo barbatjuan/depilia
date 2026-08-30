@@ -27,10 +27,20 @@ export const E2E_ADMIN_PASSWORD =
 // note: "zonas/paquetes sub-pages out of scope for this batch"), so the
 // golden-path E2E test needs one seeded directly against the DB — exactly
 // like a real deployment would seed its initial catalog once, out of band.
-export const E2E_PACKAGE_TEMPLATE_NAME = "E2E Golden Path Package";
-export const E2E_PACKAGE_TEMPLATE_ZONE = "legs";
-export const E2E_PACKAGE_TEMPLATE_SESSIONS = 3;
-export const E2E_PACKAGE_TEMPLATE_PRICE = 30000;
+// The golden-path fixture is now a REAL catalog row (migration 0012):
+// "Axilas", mujer, pequena, 6-session bono. `E2E_PACKAGE_TEMPLATE_PRICE`
+// aliases the bono price and is kept until Slice B rewires currency in the
+// e2e specs.
+export const E2E_CURRENCY = "EUR";
+export const E2E_LOCALE = "es-ES";
+export const E2E_PACKAGE_TEMPLATE_NAME = "Axilas";
+export const E2E_PACKAGE_TEMPLATE_ZONE = "Axilas";
+export const E2E_PACKAGE_TEMPLATE_GENDER = "mujer";
+export const E2E_PACKAGE_TEMPLATE_SIZE = "pequena";
+export const E2E_PACKAGE_TEMPLATE_SESSIONS = 6;
+export const E2E_PACKAGE_TEMPLATE_SESSION_PRICE = 10;
+export const E2E_PACKAGE_TEMPLATE_BONO_PRICE = 48;
+export const E2E_PACKAGE_TEMPLATE_PRICE = E2E_PACKAGE_TEMPLATE_BONO_PRICE;
 export const E2E_EXPENSE_CATEGORY_NAME = "Marketing";
 
 export function serviceRoleClient(): SupabaseClient<Database> {
@@ -179,8 +189,11 @@ async function ensurePackageTemplate(
     .insert({
       zone_id: zoneId,
       name: E2E_PACKAGE_TEMPLATE_NAME,
+      gender: E2E_PACKAGE_TEMPLATE_GENDER,
+      size_category: E2E_PACKAGE_TEMPLATE_SIZE,
       default_sessions: E2E_PACKAGE_TEMPLATE_SESSIONS,
-      price: E2E_PACKAGE_TEMPLATE_PRICE,
+      session_price: E2E_PACKAGE_TEMPLATE_SESSION_PRICE,
+      bono_price: E2E_PACKAGE_TEMPLATE_BONO_PRICE,
     });
   if (insertError) throw insertError;
 }

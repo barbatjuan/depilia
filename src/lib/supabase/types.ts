@@ -400,26 +400,35 @@ export type Database = {
       package_templates: {
         Row: {
           active: boolean
+          bono_price: number
           default_sessions: number
+          gender: string
           id: string
           name: string
-          price: number
+          session_price: number
+          size_category: string
           zone_id: string
         }
         Insert: {
           active?: boolean
-          default_sessions: number
+          bono_price: number
+          default_sessions?: number
+          gender: string
           id?: string
           name: string
-          price: number
+          session_price: number
+          size_category: string
           zone_id: string
         }
         Update: {
           active?: boolean
+          bono_price?: number
           default_sessions?: number
+          gender?: string
           id?: string
           name?: string
-          price?: number
+          session_price?: number
+          size_category?: string
           zone_id?: string
         }
         Relationships: [

@@ -13,8 +13,11 @@ describe("buildPackageSalePayload", () => {
         zoneId: "zone-1",
         zoneName: "Axilas",
         name: "Axilas x6",
+        gender: "mujer",
+        sizeCategory: "pequena",
         defaultSessions: 6,
-        price: 60000,
+        sessionPrice: 10000,
+        bonoPrice: 60000,
       },
     });
 

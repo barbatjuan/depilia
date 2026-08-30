@@ -29,8 +29,11 @@ describe.sequential("sell-package data layer", () => {
     const template = await seedPackageTemplate(db, {
       zone_id: zone.id,
       name: "Axilas x6",
+      gender: "mujer",
+      size_category: "pequena",
       default_sessions: 6,
-      price: 60000,
+      session_price: 10000,
+      bono_price: 60000,
     });
 
     const payload = buildPackageSalePayload({
@@ -40,8 +43,11 @@ describe.sequential("sell-package data layer", () => {
         zoneId: zone.id,
         zoneName: zone.name,
         name: template.name,
+        gender: template.gender as "mujer" | "hombre",
+        sizeCategory: template.size_category as "pequena",
         defaultSessions: template.default_sessions,
-        price: template.price,
+        sessionPrice: template.session_price,
+        bonoPrice: template.bono_price,
       },
     });
 
