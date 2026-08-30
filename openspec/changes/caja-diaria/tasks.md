@@ -45,22 +45,26 @@ Per-slice detail: A = SQL 175 + expenses wiring 50 + integration tests 145. B = 
 
 ## Phase B: cash feature slice (Slice B) — B.1–B.11 parallelizable; data B.12–B.14 after B.11
 
-- [ ] B.1 RED: unit `signedAmount` / `directionForKind` incl. bidirectional `ajuste` — `tests/unit/features/cash/movement.test.ts` (Req: Cash movements)
-- [ ] B.2 GREEN: `src/features/cash/domain/movement.ts`
-- [ ] B.3 RED: unit `deriveTheoreticalCash` mirrors the view formula, cash-only — `tests/unit/features/cash/theoretical-balance.test.ts` (Req: Theoretical balance derivation)
-- [ ] B.4 GREEN: `src/features/cash/domain/theoretical-balance.ts`
-- [ ] B.5 RED: unit `deriveArqueo` sobrante/faltante/exacto + 0.005 boundary; `ARQUEO_LABEL` — `tests/unit/features/cash/arqueo.test.ts` (Req: Closing arqueo)
-- [ ] B.6 GREEN: `src/features/cash/domain/arqueo.ts`
-- [ ] B.7 RED: unit `mapCashError` — 23505 duplicate-date + both trigger exceptions → Spanish — `tests/unit/features/cash/cash-errors.test.ts` (Req: Duplicate-date rejection, Daily session lifecycle)
-- [ ] B.8 GREEN: `src/features/cash/domain/cash-errors.ts`
-- [ ] B.9 RED: unit `cashWithoutOpenSession` — cash + no session → warning; card + no session → null — `tests/unit/features/cash/closed-caja-warning.test.ts` (Req: Closed-caja warning is non-blocking)
-- [ ] B.10 GREEN: `src/features/cash/domain/closed-caja-warning.ts`
-- [ ] B.11 GREEN: `src/features/cash/schema.ts` — `openSessionSchema`, `closeSessionSchema`, `movementSchema`
-- [ ] B.12 GREEN: `src/features/cash/data/cash-session.ts` — `getSessionForDate`, `getOpenSession`, `listSessions`, `openSession`, `closeSession`
-- [ ] B.13 GREEN: `src/features/cash/data/cash-movements.ts` — `listMovements`, `createMovement`, `deleteMovement`
-- [ ] B.14 GREEN: `src/features/cash/data/cash-balance.ts` — `getTheoretical` (view), `listTodayCashPayments`, `listCashExpensesForDate`
-- [ ] B.15 GREEN: `src/features/cash/actions/{open-session,close-session,register-movement}.ts` — `'use server'`, zod re-parse, data call, `mapCashError`, `revalidatePath('/caja')`
-- [ ] B.16 Un-skip A.7 parity test; run against real Postgres; confirm green
+> Implemented + fully green (210 passed / 0 skipped, lint + typecheck clean) on branch
+> `caja-diaria-pr-b`. **NOT committed** — Slice B measured 1145 changed lines, over the
+> 400 review budget. Awaiting a delivery decision (sub-slice split or size:exception).
+
+- [x] B.1 RED: unit `signedAmount` / `directionForKind` incl. bidirectional `ajuste` — `tests/unit/features/cash/movement.test.ts` (Req: Cash movements)
+- [x] B.2 GREEN: `src/features/cash/domain/movement.ts`
+- [x] B.3 RED: unit `deriveTheoreticalCash` mirrors the view formula, cash-only — `tests/unit/features/cash/theoretical-balance.test.ts` (Req: Theoretical balance derivation)
+- [x] B.4 GREEN: `src/features/cash/domain/theoretical-balance.ts`
+- [x] B.5 RED: unit `deriveArqueo` sobrante/faltante/exacto + 0.005 boundary; `ARQUEO_LABEL` — `tests/unit/features/cash/arqueo.test.ts` (Req: Closing arqueo)
+- [x] B.6 GREEN: `src/features/cash/domain/arqueo.ts`
+- [x] B.7 RED: unit `mapCashError` — 23505 duplicate-date + both trigger exceptions → Spanish — `tests/unit/features/cash/cash-errors.test.ts` (Req: Duplicate-date rejection, Daily session lifecycle)
+- [x] B.8 GREEN: `src/features/cash/domain/cash-errors.ts`
+- [x] B.9 RED: unit `cashWithoutOpenSession` — cash + no session → warning; card + no session → null — `tests/unit/features/cash/closed-caja-warning.test.ts` (Req: Closed-caja warning is non-blocking)
+- [x] B.10 GREEN: `src/features/cash/domain/closed-caja-warning.ts`
+- [x] B.11 GREEN: `src/features/cash/schema.ts` — `openSessionSchema`, `closeSessionSchema`, `movementSchema`
+- [x] B.12 GREEN: `src/features/cash/data/cash-session.ts` — `getSessionForDate`, `getOpenSession`, `listSessions`, `openSession`, `closeSession`
+- [x] B.13 GREEN: `src/features/cash/data/cash-movements.ts` — `listMovements`, `createMovement`, `deleteMovement`
+- [x] B.14 GREEN: `src/features/cash/data/cash-balance.ts` — `getTheoretical` (view), `listTodayCashPayments`, `listCashExpensesForDate`
+- [x] B.15 GREEN: `src/features/cash/actions/{open-session,close-session,register-movement}.ts` — `'use server'`, zod re-parse, data call, `mapCashError`, `revalidatePath('/caja')`
+- [x] B.16 Un-skip A.7 parity test; run against real Postgres; confirm green
 
 ## Phase C: /caja UI + closed-caja warning (Slice C)
 
