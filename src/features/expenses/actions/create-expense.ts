@@ -22,6 +22,7 @@ export async function createExpenseAction(
     amount: formData.get("amount"),
     description: formData.get("description"),
     spentOn: formData.get("spentOn"),
+    method: formData.get("method") ?? undefined,
   });
 
   if (!parsed.success) {

@@ -9,6 +9,8 @@ import type { Database } from "@/lib/supabase/types";
 export async function resetDatabase(db: SupabaseClient<Database>) {
   const tables = [
     "reminder_log",
+    "cash_movements",
+    "cash_sessions",
     "payments",
     "sales",
     "appointments",
@@ -41,6 +43,42 @@ export async function seedStaff(
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Creates a real Supabase Auth user plus a matching `staff` row (so
+ * `public.is_staff()` / `public.current_staff_id()` resolve for that JWT).
+ * Returns the staff id, the auth user id, and a `cleanup` that deletes the
+ * auth user (the `staff` row cascades away with it).
+ */
+export async function seedStaffMember(
+  db: SupabaseClient<Database>,
+  overrides: Partial<{ full_name: string }> = {},
+) {
+  const email = `staff-${crypto.randomUUID()}@example.com`;
+  const { data: created, error: userError } = await db.auth.admin.createUser({
+    email,
+    password: "correct horse battery staple 1!",
+    email_confirm: true,
+  });
+  if (userError) throw userError;
+  const userId = created.user!.id;
+
+  const { data: staff, error: staffError } = await db
+    .from("staff")
+    .insert({ user_id: userId, full_name: overrides.full_name ?? "Caja Tester" })
+    .select()
+    .single();
+  if (staffError) throw staffError;
+
+  return {
+    id: staff.id as string,
+    userId,
+    email,
+    cleanup: async () => {
+      await db.auth.admin.deleteUser(userId);
+    },
+  };
 }
 
 export async function seedZone(db: SupabaseClient<Database>, name: string) {

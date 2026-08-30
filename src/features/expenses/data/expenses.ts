@@ -1,5 +1,5 @@
 import type { AppSupabaseClient } from "@/lib/supabase/app-client";
-import type { ExpenseInput } from "@/features/expenses/schema";
+import type { ExpenseInput, ExpenseMethod } from "@/features/expenses/schema";
 
 export type ExpenseRow = {
   id: string;
@@ -8,10 +8,11 @@ export type ExpenseRow = {
   amount: number;
   description: string | null;
   spentOn: string;
+  method: ExpenseMethod;
 };
 
 const SELECT_COLUMNS =
-  "id, category_id, amount, description, spent_on, expense_categories(name)";
+  "id, category_id, amount, description, spent_on, method, expense_categories(name)";
 
 function toExpenseRow(row: {
   id: string;
@@ -19,6 +20,7 @@ function toExpenseRow(row: {
   amount: number;
   description: string | null;
   spent_on: string;
+  method: string;
   expense_categories: { name: string } | { name: string }[] | null;
 }): ExpenseRow {
   const category = Array.isArray(row.expense_categories)
@@ -31,6 +33,7 @@ function toExpenseRow(row: {
     amount: row.amount,
     description: row.description,
     spentOn: row.spent_on,
+    method: row.method as ExpenseMethod,
   };
 }
 
@@ -80,6 +83,7 @@ export async function createExpense(
       amount: input.amount,
       description: input.description || null,
       spent_on: input.spentOn,
+      method: input.method,
     })
     .select(SELECT_COLUMNS)
     .single();
@@ -99,6 +103,7 @@ export async function updateExpense(
       amount: input.amount,
       description: input.description || null,
       spent_on: input.spentOn,
+      method: input.method,
     })
     .eq("id", id)
     .select(SELECT_COLUMNS)

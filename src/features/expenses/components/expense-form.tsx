@@ -14,6 +14,7 @@ import {
 import type { ExpenseFormState } from "@/features/expenses/actions/create-expense";
 import type { ExpenseRow } from "@/features/expenses/data/expenses";
 import type { ExpenseCategoryRow } from "@/features/expenses/data/categories";
+import { EXPENSE_METHODS, EXPENSE_METHOD_LABEL } from "@/features/expenses/schema";
 
 const initialState: ExpenseFormState = { error: null };
 
@@ -34,6 +35,7 @@ export function ExpenseForm({
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [categoryId, setCategoryId] = useState(expense?.categoryId ?? "");
+  const [method, setMethod] = useState<string>(expense?.method ?? "cash");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -65,6 +67,22 @@ export function ExpenseForm({
             defaultValue={expense?.amount}
             required
           />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="method">Medio de pago</Label>
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger id="method" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EXPENSE_METHODS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {EXPENSE_METHOD_LABEL[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input type="hidden" name="method" value={method} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="spentOn">Fecha</Label>

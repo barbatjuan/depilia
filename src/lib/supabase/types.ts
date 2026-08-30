@@ -123,6 +123,121 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          kind: string
+          reason: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string
+          direction: string
+          id?: string
+          kind: string
+          reason: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          direction?: string
+          id?: string
+          kind?: string
+          reason?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_session_theoretical"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          business_date: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_note: string | null
+          counted_amount: number | null
+          difference: number | null
+          id: string
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+          theoretical_amount: number | null
+        }
+        Insert: {
+          business_date: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_amount?: number | null
+          difference?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string
+          opening_amount: number
+          status?: string
+          theoretical_amount?: number | null
+        }
+        Update: {
+          business_date?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_amount?: number | null
+          difference?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          status?: string
+          theoretical_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_packages: {
         Row: {
           client_id: string
@@ -253,6 +368,7 @@ export type Database = {
           category_id: string
           description: string | null
           id: string
+          method: string
           spent_on: string
         }
         Insert: {
@@ -260,6 +376,7 @@ export type Database = {
           category_id: string
           description?: string | null
           id?: string
+          method?: string
           spent_on: string
         }
         Update: {
@@ -267,6 +384,7 @@ export type Database = {
           category_id?: string
           description?: string | null
           id?: string
+          method?: string
           spent_on?: string
         }
         Relationships: [
@@ -479,6 +597,18 @@ export type Database = {
       }
     }
     Views: {
+      cash_session_theoretical: {
+        Row: {
+          business_date: string | null
+          cash_expenses: number | null
+          cash_payments: number | null
+          movements_net: number | null
+          opening_amount: number | null
+          session_id: string | null
+          theoretical_amount: number | null
+        }
+        Relationships: []
+      }
       client_package_remaining: {
         Row: {
           client_id: string | null
@@ -536,6 +666,7 @@ export type Database = {
         Args: { p_duration_minutes: number; p_scheduled_at: string }
         Returns: string
       }
+      current_staff_id: { Args: never; Returns: string }
       is_staff: { Args: never; Returns: boolean }
       set_appointment_status: {
         Args: { p_appointment_id: string; p_status: string }

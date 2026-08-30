@@ -33,6 +33,21 @@ describe("expenseSchema", () => {
     const result = expenseSchema.safeParse({ ...valid, description: undefined });
     expect(result.success).toBe(true);
   });
+
+  it("defaults method to 'cash' when omitted", () => {
+    const result = expenseSchema.safeParse({ ...valid, method: undefined });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.method).toBe("cash");
+  });
+
+  it("accepts the four known methods and rejects an unknown one", () => {
+    for (const method of ["cash", "card", "transfer", "other"]) {
+      expect(expenseSchema.safeParse({ ...valid, method }).success).toBe(true);
+    }
+    expect(expenseSchema.safeParse({ ...valid, method: "bitcoin" }).success).toBe(
+      false,
+    );
+  });
 });
 
 describe("expenseCategorySchema", () => {

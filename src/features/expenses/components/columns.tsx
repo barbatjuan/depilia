@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ExpenseRow } from "@/features/expenses/data/expenses";
+import { EXPENSE_METHOD_LABEL } from "@/features/expenses/schema";
 import { Button } from "@/components/ui/button";
 import { DeleteExpenseButton } from "@/features/expenses/components/delete-expense-button";
 
@@ -33,6 +34,12 @@ export const expenseColumns: ColumnDef<ExpenseRow>[] = [
     id: "description",
     header: "Descripción",
     cell: ({ row }) => row.original.description ?? "—",
+  },
+  {
+    id: "method",
+    header: "Medio",
+    cell: ({ row }) =>
+      EXPENSE_METHOD_LABEL[row.original.method] ?? row.original.method,
   },
   {
     id: "amount",
