@@ -2,15 +2,27 @@ import { describe, expect, it } from "vitest";
 import { NAV_ITEMS, isNavItemActive } from "@/components/nav-items";
 
 describe("NAV_ITEMS", () => {
-  it("lists the six required shell sections in order", () => {
+  it("lists the shell sections in order with Caja before Ventas", () => {
     expect(NAV_ITEMS.map((item) => item.title)).toEqual([
       "Dashboard",
       "Agenda",
       "Clientes",
+      "Caja",
       "Ventas",
       "Gastos",
       "Configuración",
     ]);
+  });
+
+  it("points Caja at /caja", () => {
+    const caja = NAV_ITEMS.find((item) => item.title === "Caja");
+    expect(caja?.href).toBe("/caja");
+  });
+
+  it("keeps Ventas after adding Caja", () => {
+    const titles = NAV_ITEMS.map((item) => item.title);
+    expect(titles).toContain("Ventas");
+    expect(titles.indexOf("Caja")).toBeLessThan(titles.indexOf("Ventas"));
   });
 });
 

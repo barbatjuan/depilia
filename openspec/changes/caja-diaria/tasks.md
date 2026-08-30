@@ -45,9 +45,8 @@ Per-slice detail: A = SQL 175 + expenses wiring 50 + integration tests 145. B = 
 
 ## Phase B: cash feature slice (Slice B) — B.1–B.11 parallelizable; data B.12–B.14 after B.11
 
-> Implemented + fully green (210 passed / 0 skipped, lint + typecheck clean) on branch
-> `caja-diaria-pr-b`. **NOT committed** — Slice B measured 1145 changed lines, over the
-> 400 review budget. Awaiting a delivery decision (sub-slice split or size:exception).
+> DONE — commit `016b0d4` on `caja-diaria-pr-b`, committed as `size:exception`
+> (1145 changed lines, accepted by the user). 210 passed / 0 skipped, lint + typecheck clean.
 
 - [x] B.1 RED: unit `signedAmount` / `directionForKind` incl. bidirectional `ajuste` — `tests/unit/features/cash/movement.test.ts` (Req: Cash movements)
 - [x] B.2 GREEN: `src/features/cash/domain/movement.ts`
@@ -68,14 +67,14 @@ Per-slice detail: A = SQL 175 + expenses wiring 50 + integration tests 145. B = 
 
 ## Phase C: /caja UI + closed-caja warning (Slice C)
 
-- [ ] C.1 GREEN: `src/app/(dashboard)/caja/page.tsx` — RSC, routing only, injects `AppSupabaseClient` into `data/`
-- [ ] C.2 GREEN: `src/features/cash/components/` — `open-session-form`, `close-session-form`, `movement-form`, `movement-table`, `today-cash-payments`, `arqueo-badge`, `session-summary-card` (Req: Closing arqueo, Cash movements, Theoretical balance derivation)
-- [ ] C.3 GREEN: `src/components/nav-items.ts` — add `{ title: "Caja", href: "/caja", icon: Banknote }` before "Ventas"; keep "Ventas"
-- [ ] C.4 RED: unit/integration test — `registerPaymentAction` yields `warning` for cash + no open session, `null` for card — `tests/unit/features/sales/register-payment-warning.test.ts` (Req: Closed-caja warning is non-blocking)
-- [ ] C.5 GREEN: `src/features/sales/actions/register-payment.ts` — after insert commits, try/catch `getSessionForDate`, add non-blocking `warning` to form state
-- [ ] C.6 GREEN: `src/features/sales/components/register-payment-form.tsx` — render `state.warning` with `role="status"` (never `role="alert"`)
-- [ ] C.7 GREEN: expense path — `createExpenseAction`/`updateExpenseAction` redirect to `/gastos?aviso=caja-cerrada` when cash + no open session; `src/app/(dashboard)/gastos/page.tsx` renders the banner (Req: Closed-caja warning is non-blocking)
-- [ ] C.8 E2E: re-run existing golden path unchanged (proves no regression); optional new `e2e/caja.spec.ts` — open → movement → close → arqueo badge
+- [x] C.1 GREEN: `src/app/(dashboard)/caja/page.tsx` — RSC, routing only, injects `AppSupabaseClient` into `data/` (three states: none → open form, open → summary + movements + close arqueo, closed → arqueo result; `/ventas` link)
+- [x] C.2 GREEN: `src/features/cash/components/` — `open-session-form`, `close-session-form` (live diff preview via `deriveArqueo`), `movement-form` (direction select only for `ajuste`), `movement-table`, `today-cash-payments`, `arqueo-badge`, `session-summary-card`
+- [x] C.3 GREEN: `src/components/nav-items.ts` — added `{ title: "Caja", href: "/caja", icon: Banknote }` before "Ventas"; "Ventas" kept; `nav-items.test.ts` updated (RED→GREEN) and `isNavItemActive` verified
+- [x] C.4 RED: `tests/unit/features/sales/register-payment-warning.test.ts` — 4 cases (cash+no session → warning, card → none & no query, cash+open session → none, session-check throws → swallowed)
+- [x] C.5 GREEN: `src/features/sales/actions/register-payment.ts` — after insert commits, `method === "cash"` → try/catch `getSessionForDate(today BA)` → `cashWithoutOpenSession` → non-blocking `warning` on form state
+- [x] C.6 GREEN: `src/features/sales/components/register-payment-form.tsx` — renders `state.warning` with `role="status"` (errors keep `role="alert"`)
+- [x] C.7 GREEN: `src/features/expenses/actions/caja-redirect.ts` (shared `expenseRedirectTarget`) wired into `createExpenseAction`/`updateExpenseAction` → `redirect("/gastos?aviso=caja-cerrada")` for cash + no open session on `spentOn`; `gastos/page.tsx` renders a `role="status"` banner from `?aviso=caja-cerrada`. Test: `tests/unit/features/expenses/expense-caja-warning.test.ts` (RED→GREEN, 4 cases)
+- [x] C.8 E2E: `e2e/golden-path.spec.ts` re-run UNCHANGED and green (no regression — `e2e/global-setup.ts` gained an idempotent `ensureOpenCajaToday` fixture so the golden-path cash expense still lands on `/gastos`). New `e2e/caja.spec.ts` — login → abrir caja (20000) → registrar retiro (5000) → cerrar con arqueo → asserts `Faltante` badge + computed shortfall.
 
 ## Notes
 

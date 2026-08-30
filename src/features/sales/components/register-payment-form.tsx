@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { RegisterPaymentFormState } from "@/features/sales/actions/register-payment";
 
-const initialState: RegisterPaymentFormState = { error: null };
+const initialState: RegisterPaymentFormState = { error: null, warning: null };
 
 const METHOD_LABEL: Record<string, string> = {
   cash: "Efectivo",
@@ -71,6 +71,14 @@ export function RegisterPaymentForm({
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
+        </p>
+      ) : null}
+      {state.warning ? (
+        <p
+          role="status"
+          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          {state.warning}
         </p>
       ) : null}
       <div>

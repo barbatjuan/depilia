@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import { formatInTimeZone } from "date-fns-tz";
 import type { Database } from "../src/lib/supabase/types";
 
 // The Playwright test process is a separate Node process from `pnpm dev` —
@@ -32,10 +33,51 @@ export const E2E_PACKAGE_TEMPLATE_SESSIONS = 3;
 export const E2E_PACKAGE_TEMPLATE_PRICE = 30000;
 export const E2E_EXPENSE_CATEGORY_NAME = "Marketing";
 
-function serviceRoleClient(): SupabaseClient<Database> {
+export function serviceRoleClient(): SupabaseClient<Database> {
   return createClient<Database>(LOCAL_URL, LOCAL_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+const CLINIC_TZ = "America/Argentina/Buenos_Aires";
+
+/**
+ * Ensures there is an OPEN `cash_sessions` row for today's Buenos Aires
+ * business date. The closed-caja advisory (Slice C) redirects a cash expense
+ * to `/gastos?aviso=caja-cerrada` when no caja is open — the golden path
+ * creates exactly such an expense and asserts a plain `/gastos` URL, so this
+ * fixture keeps that path green regardless of what other specs did. Idempotent
+ * and self-healing, like the rest of this setup.
+ */
+export async function ensureOpenCajaToday(service: SupabaseClient<Database>) {
+  const businessDate = formatInTimeZone(new Date(), CLINIC_TZ, "yyyy-MM-dd");
+
+  const { data: existing } = await service
+    .from("cash_sessions")
+    .select("id, status")
+    .eq("business_date", businessDate)
+    .maybeSingle();
+  if (existing?.status === "open") return;
+  if (existing) {
+    await service.from("cash_movements").delete().eq("session_id", existing.id);
+    await service.from("cash_sessions").delete().eq("id", existing.id);
+  }
+
+  const { data: staff } = await service
+    .from("staff")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!staff) throw new Error("ensureOpenCajaToday: no staff row to own the session");
+
+  const { error } = await service.from("cash_sessions").insert({
+    business_date: businessDate,
+    status: "open",
+    opening_amount: 0,
+    opened_by: staff.id,
+  });
+  if (error) throw error;
 }
 
 /**
@@ -61,6 +103,7 @@ export default async function globalSetup() {
   const zoneId = await ensureBodyZone(service, E2E_PACKAGE_TEMPLATE_ZONE);
   await ensurePackageTemplate(service, zoneId);
   await ensureExpenseCategory(service, E2E_EXPENSE_CATEGORY_NAME);
+  await ensureOpenCajaToday(service);
 }
 
 async function ensureAdminStaffUser(service: SupabaseClient<Database>) {

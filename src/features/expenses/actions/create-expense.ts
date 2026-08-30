@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseClient } from "@/lib/supabase/server";
 import { expenseSchema } from "@/features/expenses/schema";
 import { createExpense } from "@/features/expenses/data/expenses";
+import { expenseRedirectTarget } from "@/features/expenses/actions/caja-redirect";
 
 export type ExpenseFormState = { error: string | null };
 
@@ -41,6 +42,7 @@ export async function createExpenseAction(
     return { error: "No se pudo guardar el gasto. Intentá de nuevo." };
   }
 
+  const target = await expenseRedirectTarget(supabase, parsed.data);
   revalidatePath("/gastos");
-  redirect("/gastos");
+  redirect(target);
 }

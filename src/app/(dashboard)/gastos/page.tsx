@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listExpenses } from "@/features/expenses/data/expenses";
 import { ExpenseTable } from "@/features/expenses/components/expense-table";
 import { currentMonthRange, sumExpenses } from "@/features/expenses/domain/month-total";
+import { CLOSED_CAJA_WARNING } from "@/features/cash/domain/closed-caja-warning";
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -13,7 +14,12 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 0,
 });
 
-export default async function GastosPage() {
+export default async function GastosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aviso?: string }>;
+}) {
+  const { aviso } = await searchParams;
   const supabase = await createClient();
   const [expenses, month] = await Promise.all([
     listExpenses(supabase),
@@ -38,6 +44,14 @@ export default async function GastosPage() {
           <Link href="/gastos/nuevo">Nuevo gasto</Link>
         </Button>
       </div>
+      {aviso === "caja-cerrada" ? (
+        <p
+          role="status"
+          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          {CLOSED_CAJA_WARNING}
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 gap-4 sm:max-w-xs">
         <KpiCard
           label="Total del mes"

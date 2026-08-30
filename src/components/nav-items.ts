@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Calendar,
   LayoutDashboard,
   Settings,
@@ -15,12 +16,15 @@ export type NavItem = {
 };
 
 /**
- * The six required app-shell sections (design "UI System"), in nav order.
+ * The app-shell sections (design "UI System"), in nav order. "Caja" sits
+ * between "Clientes" and "Ventas" so the daily cash workflow is one click
+ * from the sales it reconciles.
  */
 export const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Agenda", href: "/agenda", icon: Calendar },
   { title: "Clientes", href: "/clientes", icon: Users },
+  { title: "Caja", href: "/caja", icon: Banknote },
   { title: "Ventas", href: "/ventas", icon: ShoppingCart },
   { title: "Gastos", href: "/gastos", icon: Wallet },
   { title: "Configuración", href: "/configuracion", icon: Settings },
