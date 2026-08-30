@@ -176,10 +176,15 @@ async function ensurePackageTemplate(
   service: SupabaseClient<Database>,
   zoneId: string,
 ) {
+  // Match on (name, gender): migration 0013 seeds the real catalog with one
+  // "Axilas" template per gender, so a name-only lookup returns two rows and
+  // `.maybeSingle()` errors. The (zone_id, gender) partial unique index makes
+  // this pair unique.
   const { data: existingTemplate, error: templateLookupError } = await service
     .from("package_templates")
     .select("id")
     .eq("name", E2E_PACKAGE_TEMPLATE_NAME)
+    .eq("gender", E2E_PACKAGE_TEMPLATE_GENDER)
     .maybeSingle();
   if (templateLookupError) throw templateLookupError;
   if (existingTemplate) return;

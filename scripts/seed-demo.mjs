@@ -82,13 +82,16 @@ async function main() {
   die("load body_zones", zonesErr);
   const zoneId = Object.fromEntries(zones.map((z) => [z.name, z.id]));
 
-  // 3. Servicios / package templates. Find-or-create by name.
+  // 3. Servicios / package templates. Find-or-create by (name, gender):
+  //    migration 0013 seeds the real catalog with one row per gender for each
+  //    area, so a name-only lookup would match two rows.
   const templates = [];
   for (const s of serviceSpecs) {
     const { data: existing } = await db
       .from("package_templates")
       .select("id, name, default_sessions, bono_price")
       .eq("name", s.name)
+      .eq("gender", s.gender)
       .maybeSingle();
     if (existing) {
       templates.push(existing);
