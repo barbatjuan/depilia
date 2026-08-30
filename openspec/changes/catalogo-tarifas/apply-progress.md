@@ -244,4 +244,81 @@ Strict TDD. Test runner `pnpm test`. Local Supabase (migrations 0001–0014).
 
 Revert the Slice C commit on `catalogo-tarifas-pr-c`. `tariff-picker.ts` is new (safe to delete). `package_templates` columns stay harmless. No migration, no data change.
 
-## Slices D1 – D2 — NOT STARTED
+## Slice D — `/configuracion/tarifas` ABM (archive-only) — DONE
+
+PR 5 (base: `catalogo-tarifas-pr-c` @ 3b4075b, branch `catalogo-tarifas-pr-d`).
+Strict TDD. Test runner `pnpm test`. Local Supabase (migrations 0001–0014).
+**size:exception** — user pre-accepted for this change (budget 400).
+
+**SCOPE CHANGE (user decision 2026-08-30):** original D1 (`/configuracion/tarifas`) + D2
+(`/configuracion/zonas`) merged into one Phase D. **D2's standalone zonas screen is
+DROPPED / folded** — no `/configuracion/zonas` route, no `data/zonas.ts`, no
+`bodyZoneSchema`, no `zone-delete-errors.ts`, no zone components. Bare `body_zones`
+rows are created inline through the "type a new zone" combobox path in the
+create-tarifa form (`resolveZoneId`: `ilike` match OR insert). Spec R5 (zone
+lifecycle) is met by that inline creation plus the pre-existing `body_zones.archived`
+flag; no zone edit/archive UI ships.
+
+### Completed tasks
+
+- [x] D.1 – D.12 (all of merged Phase D)
+
+### Files changed
+
+| File | Action | What was done |
+|------|--------|---------------|
+| `src/features/settings/schema.ts` | Created | `TARIFA_GENDERS`, `TARIFA_SIZES`, `tariffSchema` (create — `zoneName` trim/min-1, `gender`/`sizeCategory` enums, `sessionPrice`/`bonoPrice` positive coerced, `defaultSessions` int>0 default 6), `tariffUpdateSchema` (edit — size + prices only) |
+| `src/features/settings/domain/tarifa-errors.ts` | Created | `mapTarifaError` — SQLSTATE `23505` → "Ya existe una tarifa activa para esa zona y género.", `23514` → "El precio debe ser mayor a 0.", generic fallback |
+| `src/features/settings/domain/tariff-list.ts` | Created | `groupTariffsForList<T extends {sizeCategory}>` — reuses `SIZE_ORDER`/`SIZE_LABEL` from `packages/domain/tariff-picker`, empty groups omitted |
+| `src/features/settings/data/tarifas.ts` | Created | `TariffRow`; `listTariffs({gender?, sizeCategory?, includeArchived?})` (active-only default); `getTariff`; `resolveZoneId` (case-insensitive `ilike` match OR insert new `body_zones`); `createTariff` (resolves/creates zone, inserts `package_templates` `active=true`); `updateTariff` (size+prices); `archiveTariff` (`active=false`); `restoreTariff` (`active=true`). **No `deleteTariff`** (design decision 8) |
+| `src/features/settings/actions/create-tarifa.ts` | Created | `"use server"` `createTarifaAction` + `TarifaFormState`; zod re-parse, `mapTarifaError` on catch, `revalidatePath` + `redirect('/configuracion/tarifas')` |
+| `src/features/settings/actions/update-tarifa.ts` | Created | `"use server"` `updateTarifaAction` bound to id; `tariffUpdateSchema`; `revalidatePath` + `redirect` |
+| `src/features/settings/actions/archive-tarifa.ts` | Created | `"use server"` `archiveTarifaAction` + `restoreTarifaAction` + `ArchiveTarifaState`; restore maps `23505` via `mapTarifaError`; return-state (no redirect) |
+| `src/features/settings/components/tarifa-form.tsx` | Created | `"use client"` — zone `<input list>` + `<datalist>` combobox (edit mode: disabled), gender buttons + hidden input (edit: locked), size shadcn `Select` + hidden input, `sessionPrice`/`bonoPrice` number inputs; `useActionState` |
+| `src/features/settings/components/tarifa-columns.tsx` | Created | TanStack columns — zona, sesión (`<MoneyCell>`), bono (`<MoneyCell>`), estado `<Badge>`, edit `<Link>` + `<ArchiveTarifaButton>` |
+| `src/features/settings/components/tarifa-list.tsx` | Created | `"use client"` — `groupTariffsForList(rows)` → one `<DataTable>` per size section; empty-state message |
+| `src/features/settings/components/archive-tarifa-button.tsx` | Created | `"use client"` — archive/restore toggle via `useActionState`, error `role="alert"` |
+| `src/app/(dashboard)/configuracion/tarifas/page.tsx` | Created | RSC — reads `?gender=` (default `mujer`) + `?archived=1`; Mujer/Hombre tab links; "Mostrar/Ocultar archivadas" toggle; "Agregar tarifa" button; `<TarifaList>` |
+| `src/app/(dashboard)/configuracion/tarifas/nueva/page.tsx` | Created | RSC — `listActiveBodyZones` → zone names for the datalist; `<TarifaForm action={createTarifaAction}>` |
+| `src/app/(dashboard)/configuracion/tarifas/[id]/editar/page.tsx` | Created | RSC — `getTariff` → `notFound()` if missing; `<TarifaForm tarifa={…} action={updateTarifaAction.bind(null, id)}>` |
+| `src/app/(dashboard)/configuracion/page.tsx` | Modified | Added "Tarifas" card ("Administrar tarifas" link) in a 2-col grid next to "Categorías de gastos"; `nav-items.ts` UNCHANGED |
+| `tests/unit/features/settings/schema.test.ts` | Created | 7 specs — valid create + `defaultSessions` default 6, zone-name trim, blank zone rejected, non-positive prices rejected, unknown gender/size rejected, update schema size+prices only, update non-positive rejected |
+| `tests/unit/features/settings/tarifa-errors.test.ts` | Created | 3 specs — 23505, 23514, generic fallback |
+| `tests/unit/features/settings/tariff-list.test.ts` | Created | 2 specs — canonical size order + empty groups dropped, empty input → `[]` |
+| `tests/integration/catalog/tarifas.test.ts` | Created | 8 specs (real local Postgres via service role) — new-zone create makes both rows; existing zone reused case-insensitively; duplicate `(zone, gender)` active → 23505 + other gender allowed; archive → `active=false`, gone from `listActivePackageTemplates`, row retained; update size+prices; restore → 23505 on conflict; template delete → `client_packages.template_id = NULL`; non-staff JWT read/write denied |
+| `e2e/tarifas.spec.ts` | Created | login → configuración → "Administrar tarifas" → "Agregar tarifa" → fill new zone + Mujer + Mini + prices → "Crear tarifa" → row visible in list → "Archivar" → row hidden |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| D.1 | `tests/unit/features/settings/schema.test.ts` | Unit | N/A (new) | ✅ import fails — no `settings/schema.ts` | ✅ 7/7 | ✅ trim + blank + ≤0 both prices + bad enum both fields + update variant | ➖ None |
+| D.2 | `tests/unit/features/settings/tarifa-errors.test.ts` | Unit | N/A (new) | ✅ import fails — no `tarifa-errors.ts` | ✅ 3/3 | ✅ 23505 vs 23514 vs 23503/empty | ➖ None |
+| D.3 | `tests/unit/features/settings/tariff-list.test.ts` | Unit | N/A (new) | ✅ import fails — no `tariff-list.ts` | ✅ 2/2 | ✅ shuffled input → canonical order + empty-group omit; empty input | ➖ None |
+| D.4 | `tests/integration/catalog/tarifas.test.ts` | Integration | N/A (new) | ✅ import fails — no `data/tarifas.ts` | ✅ 8/8 | ✅ new zone vs existing zone; dupe rejected + other gender OK; archive hides + retains; restore conflict; FK SET NULL; RLS | ➖ None |
+| D.5–D.10 | `tarifas.test.ts` + `e2e/tarifas.spec.ts` | Integration + E2E | ✅ full suite 253→273, e2e 4→5 | ✅ e2e RED — no `/configuracion/tarifas` route (404) | ✅ e2e 5/5, integ 8/8 | ✅ create-new-zone + list-render + archive flow each exercised end-to-end | ➖ None |
+| D.11 | `e2e/tarifas.spec.ts` | E2E | ✅ golden-path + caja UNCHANGED and green | ✅ route/card/form absent | ✅ 5/5 e2e | ➖ Single flow | ➖ None |
+| D.12 | full `pnpm test` + `pnpm e2e` + lint + typecheck | All | ✅ 253→273 | — | ✅ 273/273, 5/5 e2e, lint+tsc clean | — | — |
+
+### Test / lint / typecheck / e2e results
+
+- `pnpm typecheck` — pass (0 errors)
+- `pnpm lint` — pass (0 warnings)
+- `pnpm test` — 60 files, **273 passed** / 0 failed (was 253; +20: schema 7, tarifa-errors 3, tariff-list 2, integration tarifas 8)
+- `pnpm e2e` — **5 passed** (golden-path, caja, 2× login, tarifas) — golden-path + caja unchanged
+
+### Deviations from design
+
+1. **D2 dropped entirely** (user decision) — no `/configuracion/zonas`. `data/zonas.ts`, `bodyZoneSchema`, `zone-delete-errors.ts`, and the zonas route tree were never written. Zone creation is inline-only via `resolveZoneId` in `createTariff`.
+2. Schema drops the design's separate `zoneId` field — the combobox only yields a name; `resolveZoneId` does the `ilike`-or-insert. Template `name` is set to the (trimmed) zone name, matching the A2 seed convention (one template row per gender, named after the area).
+3. `tariff-list.ts` adds a settings-local `groupTariffsForList` generic helper rather than making `packages/domain/tariff-picker.groupTariffsBySize` generic — keeps Slice C's file untouched; it still reuses `SIZE_ORDER`/`SIZE_LABEL` from there.
+4. Gender/zone are display-only (disabled inputs) in edit mode — they identify the row under the partial unique index, so moving a tariff is archive + create, per the spec.
+5. Error mapper also handles `23514` (check constraint) in addition to the design's `23505`, since `sessionPrice`/`bonoPrice > 0` are enforced both by zod and the DB.
+
+### Authored line count
+
+**1295 added / 13 deleted ≈ 1308 changed** (no generated files in this slice). Tests ≈ 374 (unit 128, integration 193, e2e 53); production ≈ 920. Design estimated D1 ~370 + D2 ~330 = ~700 for the pair; the merged slice runs higher because the tariff ABM absorbed the zone-combobox + inline-zone-create logic that a standalone zonas screen would have carried, plus a fuller integration suite. **size:exception — user pre-accepted for this change.**
+
+### Rollback boundary
+
+`git revert` the Slice D commit on `catalogo-tarifas-pr-d`. Everything is additive: the whole `src/features/settings/{schema,domain,data,actions,components}` tarifa set + the `configuracion/tarifas/**` route tree are new files; `configuracion/page.tsx` gains one card. No migration, no schema change, no data change. `package_templates` / `body_zones` rows created through the UI during testing are dev-DB only.

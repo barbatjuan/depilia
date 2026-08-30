@@ -91,32 +91,26 @@ Strict TDD: a RED test precedes every GREEN task. SQL invariants are tested agai
 - [x] C.10 GREEN `PackageSaleActions` passes `templates` to both sheets; `zones` remains only for the custom package branch
 - [x] C.11 GREEN run `pnpm test tests/unit/features/packages` + golden path
 
-## Phase D1: `/configuracion/tarifas` ABM — archive-only (spec service-catalog R4, R6)
+## Phase D: `/configuracion/tarifas` ABM — archive-only (spec service-catalog R4, R5, R6) — ALL DONE [x] (`catalogo-tarifas-pr-d`, size:exception ~1308 changed / ~374 tests)
 
-- [ ] D1.1 RED unit: `tariffSchema` — `zoneId`, `name`, `gender` enum, `sizeCategory` enum, `defaultSessions` int `>0` default 6, `sessionPrice > 0`, `bonoPrice > 0` — `tests/unit/features/settings/tariff-schema.test.ts`
-- [ ] D1.2 RED integ: `createTariff` → `active=true`, `default_sessions=6`; `archiveTariff` sets `active=false`, row retained, dropped from default list; 23505 → "Ya existe una tarifa activa para esa zona y género." — `tests/integration/catalog/tarifas.test.ts`
-- [ ] D1.3 RED integ: deleting a template → `client_packages` row survives with `template_id = NULL` (ON DELETE SET NULL) — same file ("template_id SET NULL")
-- [ ] D1.4 GREEN `src/features/settings/data/tarifas.ts` — `TariffRow`, `listTariffs(s, {gender?, sizeCategory?, includeArchived?})`, `getTariff`, `createTariff`, `updateTariff`, `archiveTariff` (`active=false`), `restoreTariff`. **No `deleteTariff`** (design decision 8 — `template_id` is SET NULL, a delete would silently orphan history)
-- [ ] D1.5 GREEN `src/features/settings/schema.ts` `tariffSchema`; `src/features/settings/domain/tariff-errors.ts` maps 23505
-- [ ] D1.6 GREEN actions `create` / `update` / `archive` tariff — `"use server"`, zod re-parse, `revalidatePath`
-- [ ] D1.7 GREEN routes `configuracion/tarifas/{page,nueva/page,[id]/editar/page}.tsx` mirroring `/configuracion/categorias` file-for-file; list page reads `?gender=&size=` from `searchParams`
-- [ ] D1.8 GREEN 4 components: tariff list / table / form / gender+size filters
-- [ ] D1.9 GREEN `configuracion/page.tsx` gains the tarifas card; `src/components/nav-items.ts` UNCHANGED
-- [ ] D1.10 GREEN run `pnpm test`
+**SCOPE CHANGE (user decision 2026-08-30): D1 + D2 merged into one Phase D. D2's standalone `/configuracion/zonas` screen is DROPPED / folded — there is NO dedicated zonas route, data layer, schema, or components.** Bare `body_zones` rows are created inline via the "type a new zone" combobox path in the create-tarifa form. R5 (zone lifecycle) is satisfied by that inline creation plus the existing `archived` flag; no zone editing/archiving UI ships.
 
-## Phase D2: `/configuracion/zonas` ABM — full delete→archive (spec service-catalog R5)
-
-- [ ] D2.1 RED unit: `bodyZoneSchema` (name only) — `tests/unit/features/settings/zone-schema.test.ts`
-- [ ] D2.2 RED integ: `createBodyZone` / `archiveBodyZone`; `deleteBodyZone` hits RESTRICT → 23503 → archive fallback; archived zone excluded from active pickers — `tests/integration/catalog/zonas.test.ts`
-- [ ] D2.3 GREEN `src/features/settings/data/zonas.ts` — full categorias parity: `listBodyZones`, `getBodyZone`, `createBodyZone`, `updateBodyZone`, `archiveBodyZone`, `deleteBodyZone` (RESTRICT → 23503 → archive fallback)
-- [ ] D2.4 GREEN `src/features/settings/schema.ts` `bodyZoneSchema`; `src/features/settings/domain/zone-delete-errors.ts`
-- [ ] D2.5 GREEN actions `create` / `update` / `archive` / `delete` zone — `"use server"`, zod re-parse, `revalidatePath`
-- [ ] D2.6 GREEN routes `configuracion/zonas/{page,nueva/page,[id]/editar/page}.tsx` mirroring categorias
-- [ ] D2.7 GREEN 4 components; `configuracion/page.tsx` gains the zonas card
-- [ ] D2.8 GREEN run `pnpm test`
+- [x] D.1 RED unit: `tariffSchema` + `tariffUpdateSchema` — `zoneName` trim, `gender`/`sizeCategory` enums, `defaultSessions` int `>0` default 6, `sessionPrice`/`bonoPrice > 0` — `tests/unit/features/settings/schema.test.ts` (7)
+- [x] D.2 RED unit: `mapTarifaError` — 23505 → "Ya existe una tarifa activa para esa zona y género.", 23514 → "El precio debe ser mayor a 0.", generic fallback — `tests/unit/features/settings/tarifa-errors.test.ts` (3)
+- [x] D.3 RED unit: `groupTariffsForList` — size grouping in `SIZE_ORDER`, empty groups omitted — `tests/unit/features/settings/tariff-list.test.ts` (2)
+- [x] D.4 RED integ: `createTariff` for a new zone name creates both `body_zones` + `package_templates` rows (`active=true`, `default_sessions=6`); reuses an existing zone case-insensitively; duplicate `(zone, gender)` active → 23505; `archiveTariff` → `active=false`, row retained, gone from `listActivePackageTemplates`; `updateTariff` size+prices only; `restoreTariff` → 23505 on conflict; deleting a template → `client_packages.template_id = NULL`; RLS denial for non-staff — `tests/integration/catalog/tarifas.test.ts` (8)
+- [x] D.5 GREEN `src/features/settings/data/tarifas.ts` — `TariffRow`, `listTariffs(s, {gender?, sizeCategory?, includeArchived?})`, `getTariff`, `resolveZoneId` (ilike match OR insert new `body_zones`), `createTariff`, `updateTariff`, `archiveTariff` (`active=false`), `restoreTariff`. **No `deleteTariff`** (design decision 8)
+- [x] D.6 GREEN `src/features/settings/schema.ts` `tariffSchema` + `tariffUpdateSchema` + `TARIFA_GENDERS` / `TARIFA_SIZES`; `src/features/settings/domain/tarifa-errors.ts` (23505 + 23514); `src/features/settings/domain/tariff-list.ts` `groupTariffsForList` (reuses `SIZE_ORDER`/`SIZE_LABEL` from `packages/domain/tariff-picker`)
+- [x] D.7 GREEN actions `create-tarifa` / `update-tarifa` / `archive-tarifa` (`archiveTarifaAction` + `restoreTarifaAction`) — `"use server"`, zod re-parse, `revalidatePath('/configuracion/tarifas')`, `redirect` on create/update
+- [x] D.8 GREEN routes `configuracion/tarifas/{page,nueva/page,[id]/editar/page}.tsx`; list page reads `?gender=&archived=` from `searchParams` (default `mujer`, active-only); Mujer/Hombre tabs + "Mostrar archivadas" toggle
+- [x] D.9 GREEN components: `tarifa-form` (zone combobox via `<datalist>` + gender buttons + size Select; edit mode locks zone+gender), `tarifa-list` (size-sectioned `DataTable`s via `groupTariffsForList`), `tarifa-columns` (`MoneyCell` for prices), `archive-tarifa-button` (archive/restore toggle)
+- [x] D.10 GREEN `configuracion/page.tsx` gains the "Tarifas" card next to "Categorías de gastos"; `src/components/nav-items.ts` UNCHANGED
+- [x] D.11 GREEN e2e `e2e/tarifas.spec.ts` — login → configuración → tarifas → add a tariff for a new zone → see it listed → archive it; golden-path + caja specs UNCHANGED and green
+- [x] D.12 GREEN full run: `pnpm test` 273/273, `pnpm e2e` 5/5, `pnpm lint` + `pnpm typecheck` clean
 
 ## Notes
 
-- Slices are sequential: A2 imports A1's schema; B's e2e rewrite assumes A1's renamed constants; C imports B's `formatMoney` and A1's renamed domain; D1/D2 are additive on top of C.
+- Slices are sequential: A2 imports A1's schema; B's e2e rewrite assumes A1's renamed constants; C imports B's `formatMoney` and A1's renamed domain; D is additive on top of C.
+- Phase D landed as a single `size:exception` slice (~1308 changed lines, ~374 of them tests) — user pre-accepted the exception. D2 (`/configuracion/zonas`) was dropped; its ~330 lines never shipped.
 - Within a slice, RED tasks for independent invariants may be written in parallel; GREEN migration/module tasks are single-writer.
 - Open design questions to confirm before A2 lands: MEDIANA's 26 explicit rows vs source photos; booking zone dropdown growing 5→35 with no gender context; whether `seed-demo.mjs` should sample the seeded real catalog.
