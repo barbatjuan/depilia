@@ -54,11 +54,11 @@ Strict TDD: a RED test precedes every GREEN task. SQL invariants are tested agai
 
 ## Phase A2: Migration `0013` seed (spec service-catalog R3)
 
-- [ ] A2.1 RED integ: `0013` idempotent re-run — no duplicates, no error (`on conflict do nothing`) — `tests/integration/catalog/seed.test.ts` ("Idempotent re-run")
-- [ ] A2.2 RED integ: gender-specific areas — `Ingles Completas` mujer-only, `Perfilado de barba` hombre-only — same file ("Gender-specific seeding")
-- [ ] A2.3 RED integ: post-seed shape — 68 templates, 35 distinct zones, 0 duplicate `(area, gender)`, every seeded `default_sessions = 6` — same file ("Catalog size and shape")
-- [ ] A2.4 GREEN `supabase/migrations/0013_seed_service_catalog.sql` — `create table catalog_seed(area, gender, size_category, session_price, bono_price)`; MINI + GRANDE via `unnest(array[...]) cross join (values ...)`; PEQUEÑA (10) / MEDIANA (26) / CUERPO (2) explicit; `do $$` transcription guard asserting 68 / 35 / 0-dupes / plausible pricing, raising before commit; then **3 SEPARATE statements** (not one CTE chain): `insert into body_zones select distinct area ... on conflict (name) do nothing`; `insert into package_templates ... from catalog_seed c join body_zones z on z.name = c.area ... on conflict do nothing`; `drop table catalog_seed`
-- [ ] A2.5 GREEN run A2 tests against real local Postgres; confirm green
+- [x] A2.1 RED integ: `0013` idempotent re-run — no duplicates, no error (`on conflict do nothing`) — `tests/integration/catalog/seed.test.ts` ("Idempotent re-run inserts zero additional rows")
+- [x] A2.2 RED integ: gender-specific areas — `Ingles Completas` mujer-only, `Perfilado de barba` hombre-only — same file ("Gender-specific areas")
+- [x] A2.3 RED integ: post-seed shape — 68 templates, 35 distinct zones, 0 duplicate `(area, gender)`, every seeded `default_sessions = 6` — same file ("Catalog size and shape"); also asserts size + gender distribution and a 7-row price spot-check ("Spot-check prices against the source price list")
+- [x] A2.4 GREEN `supabase/migrations/0013_seed_service_catalog.sql` — `create temporary table catalog_seed(area, gender, size_category, session_price, bono_price)` (temp + explicit `drop table` — robust for the replay-in-transaction test); MINI + GRANDE via `unnest(array[...]) cross join (values ...)`; PEQUEÑA (10) / MEDIANA (26) / CUERPO (2) explicit; `do $$` transcription guard asserting 68 / 35 / 0-dupes / `bono_price >= session_price > 0`, raising before commit; then **3 SEPARATE statements** (not one CTE chain): `insert into body_zones select distinct area ... on conflict (name) do nothing`; `insert into package_templates ... from catalog_seed c join body_zones z on z.name = c.area ... on conflict (zone_id, gender) where active do nothing`; `drop table catalog_seed`
+- [x] A2.5 GREEN run A2 tests against real local Postgres; confirm green
 
 ## Phase B: Migration `0014` + shared money formatter (spec clinic-currency R1–R6)
 

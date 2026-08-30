@@ -65,4 +65,56 @@ RED for the schema suite was executed (`ENOENT ... 0012_service_catalog.sql`) be
 
 Drop `package_templates_zone_gender_active_idx` + the 4 new constraints, `rename bono_price -> price`, drop the 3 columns, `update body_zones set archived=false where name in (5 English)`. Revert the 8 touched source/harness files. `client_packages` / `sales` never need rollback.
 
-## Slices A2 – D2 — NOT STARTED
+## Slice A2 — Migration 0013 real catalog seed — DONE
+
+PR 2 (base: `catalogo-tarifas-pr-a1` @ 5013464, branch `catalogo-tarifas-pr-a2`,
+commit `5de048c`). Strict TDD. Test runner `pnpm test`. Local Supabase.
+
+### Completed tasks
+
+- [x] A2.1 – A2.5 (all of Phase A2)
+
+### Files changed
+
+| File | Action | What |
+|------|--------|------|
+| `supabase/migrations/0013_seed_service_catalog.sql` | Created | Staging table `catalog_seed` loaded with all 68 rows: MINI (11 zones) + GRANDE (4 zones) via `unnest(array[...]) cross join (values (mujer…),(hombre…))`; PEQUEÑA (10 rows), MEDIANA (26 rows), CUERPO (2 rows) explicit `values`. `do $$` transcription guard raises unless staging is exactly 68 rows / 35 distinct zones / 0 duplicate `(area, gender)` / `bono_price >= session_price > 0`. Then 3 separate statements: `insert into body_zones select distinct area … on conflict (name) do nothing`; `insert into package_templates … from catalog_seed c join body_zones z on z.name = c.area … on conflict (zone_id, gender) where active do nothing` (`default_sessions = 6`, `active = true`); `drop table catalog_seed`. |
+| `tests/integration/catalog/seed.test.ts` | Created | 4 specs via `withPgClient` + `BEGIN` / `truncate body_zones … cascade` / replay real `0013` file / assert / `ROLLBACK` (bound to migration text, live catalog untouched): catalog size + shape (35 zones, 68 active templates, every `default_sessions = 6`, 0 duplicate `(zone_id, gender)`, size distribution mini 22 / pequena 10 / mediana 26 / grande 8 / cuerpo 2, gender 34/34); gender-specific areas (`Ingles Completas` mujer-only, `Perfilado de barba` hombre-only); 7-row price spot-check (mujer Labio 6/30, hombre Abdomen 30/150, mujer Cuerpo Completo 80/450, hombre Piernas completas 50/240, mujer Axilas 10/48, mujer Lumbar 15/78, hombre Lumbar 30/150); idempotent re-run inserts 0 rows. |
+
+Migration applied to local DB via `supabase migration up` (live: 35 zones, 68 active templates).
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| A2.1 | `tests/integration/catalog/seed.test.ts` | Integration (raw pg) | N/A (new) | ✅ ENOENT on missing `0013` | ✅ Passed | ➖ Single (re-run delta = 0) | ➖ None needed |
+| A2.2 | same | Integration (raw pg) | N/A (new) | ✅ (same ENOENT suite fail) | ✅ Passed | ✅ mujer-only + hombre-only asserted | ➖ None |
+| A2.3 | same | Integration (raw pg) | N/A (new) | ✅ | ✅ Passed | ✅ counts + size dist + gender dist + 7-row price spot-check | ➖ None |
+| A2.4 | (migration — verified by A2.1–A2.3) | Integration | N/A (new) | ✅ | ✅ Passed | ✅ forced by the 4 specs | ➖ None |
+
+RED executed: `Error: ENOENT … 0013_seed_service_catalog.sql` (suite failed to collect, 0 tests) before the migration existed. GREEN: 4/4 after writing the migration.
+
+### Test / lint / typecheck / e2e results
+
+- `pnpm test tests/integration/catalog/seed.test.ts` — 4 passed
+- `pnpm test` — 51 files, 231 passed / 0 failed (was 227; +4 from `catalog/seed.test.ts`)
+- `pnpm lint` — pass (0 warnings)
+- `pnpm typecheck` — pass (0 errors)
+- `pnpm e2e` — 4 passed (golden-path, caja, 2× login)
+
+### Deviations from design
+
+1. `create temporary table catalog_seed` instead of the design's plain `create table`. Explicit `drop table` is kept as the design specified. Temp scope makes the replay-in-transaction test safe to run the file twice in one transaction and leaves nothing behind if a run aborts before `drop`. Behaviour under `supabase db reset` (single session per migration) is identical.
+2. `on conflict (zone_id, gender) where active do nothing` — partial-index inference matching `package_templates_zone_gender_active_idx` from 0012 (design left the exact conflict phrasing open).
+3. `seed-demo.mjs` left as-is (A1 harness state). The design open question "should seed-demo sample the seeded catalog?" is not a decision; switching it is deferred and out of A2 scope. Golden path and `pnpm test` unaffected.
+4. Guard also checks `bono_price >= session_price` (design said "no implausible pricing" without a rule).
+
+### Authored line count
+
+156 (migration) + 153 (test) = **309 added / 0 deleted ≈ 309 authored**. Design estimated ~200 (SQL 130 / tests 70); the 68-row VALUES block plus a 7-row price spot-check and distribution assertions account for the delta — it is data, not logic. Under the 400 budget.
+
+### Rollback boundary
+
+`delete from package_templates where zone_id in (select id from body_zones where name = any(<35 seeded names>))` then `delete from body_zones where name = any(<35 seeded names>)` (safe — no `client_packages` can reference a just-seeded template). Delete `supabase/migrations/0013_seed_service_catalog.sql` and `tests/integration/catalog/seed.test.ts`. No source files touched.
+
+## Slices B – D2 — NOT STARTED
