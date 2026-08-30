@@ -62,20 +62,20 @@ Strict TDD: a RED test precedes every GREEN task. SQL invariants are tested agai
 
 ## Phase B: Migration `0014` + shared money formatter (spec clinic-currency R1–R6)
 
-- [ ] B.1 RED unit: `formatMoney` deterministic per explicit `(currency, locale)`, no hardcoded fallback — `tests/unit/lib/money.test.ts` ("formatMoney determinism")
-- [ ] B.2 RED unit: repo-guard — no `Intl.NumberFormat(…'ARS'…)` / `'es-AR'` literal survives outside `src/lib/money.ts` — `tests/unit/lib/no-hardcoded-currency.test.ts` ("No hardcoded currency literals")
-- [ ] B.3 RED integ: `clinic_settings.currency` default `'EUR'` + `locale` default `'es-ES'`; update persists (no amount conversion); RLS denial for non-staff — `tests/integration/catalog/clinic-currency.test.ts`
-- [ ] B.4 GREEN `supabase/migrations/0014_clinic_currency.sql` — `add column currency text not null default 'EUR' check (currency ~ '^[A-Z]{3}$')`, `add column locale text not null default 'es-ES'`
-- [ ] B.5 GREEN `src/lib/money.ts` — pure: `MoneyFormat`, `DEFAULT_MONEY_FORMAT`, `formatMoney`, `moneyFormatter` (memoized by `${locale}|${currency}`); currency-default fraction digits, drop `maximumFractionDigits: 0`
-- [ ] B.6 GREEN `src/features/settings/data/money-format.ts` — `getMoneyFormat` via React `cache()`, one query/request, falls back to `DEFAULT_MONEY_FORMAT` when the clinic_settings row is missing
-- [ ] B.7 GREEN `src/components/money-format-provider.tsx` — `"use client"` `MoneyFormatProvider` + `useMoneyFormat`
-- [ ] B.8 GREEN `src/components/money-cell.tsx` — `"use client"` `MoneyCell` for TanStack column `cell` closures
-- [ ] B.9 GREEN `src/app/(dashboard)/layout.tsx` — convert to `async`, mount `MoneyFormatProvider` for the authenticated shell
-- [ ] B.10 GREEN 5 client call sites via `useMoneyFormat()` — `cash/components/{close-session-form,movement-table,arqueo-badge,today-cash-payments,session-summary-card}.tsx`
-- [ ] B.11 GREEN 2 column-def sites via `<MoneyCell>` — `sales/components/columns.tsx`, `expenses/components/columns.tsx`
-- [ ] B.12 GREEN 4 RSC sites via `await getMoneyFormat(supabase)` + `formatMoney` — `app/(dashboard)/dashboard/page.tsx`, `gastos/page.tsx`, `clientes/[id]/page.tsx`, `ventas/[id]/page.tsx`
-- [ ] B.13 GREEN `e2e/money.ts` shared helper; rewrite money assertions in `e2e/golden-path.spec.ts` ("6 de 6 sesiones restantes", "5 de 6", payment `29`, remaining `"19,00 €"`, `^Paquete Axilas`) and `e2e/caja.spec.ts` (exact `formatMoney(shortfall, {EUR, es-ES})` string, replacing the `\$`-anchored regex)
-- [ ] B.14 GREEN run `pnpm test` + `pnpm playwright test e2e`; confirm golden path + caja green
+- [x] B.1 RED unit: `formatMoney` deterministic per explicit `(currency, locale)`, no hardcoded fallback — `tests/unit/lib/money.test.ts` ("formatMoney determinism")
+- [x] B.2 RED unit: repo-guard — no `Intl.NumberFormat(…'ARS'…)` / `'es-AR'` literal survives outside `src/lib/money.ts` — `tests/unit/lib/no-hardcoded-currency.test.ts` ("No hardcoded currency literals")
+- [x] B.3 RED integ: `clinic_settings.currency` default `'EUR'` + `locale` default `'es-ES'`; update persists (no amount conversion); RLS denial for non-staff — `tests/integration/catalog/clinic-currency.test.ts`
+- [x] B.4 GREEN `supabase/migrations/0014_clinic_currency.sql` — `add column currency text not null default 'EUR' check (currency ~ '^[A-Z]{3}$')`, `add column locale text not null default 'es-ES'`
+- [x] B.5 GREEN `src/lib/money.ts` — pure: `MoneyFormat`, `DEFAULT_MONEY_FORMAT`, `formatMoney`, `moneyFormatter` (memoized by `${locale}|${currency}`); currency-default fraction digits, drop `maximumFractionDigits: 0`
+- [x] B.6 GREEN `src/features/settings/data/money-format.ts` — `getMoneyFormat` via React `cache()`, one query/request, falls back to `DEFAULT_MONEY_FORMAT` when the clinic_settings row is missing
+- [x] B.7 GREEN `src/components/money-format-provider.tsx` — `"use client"` `MoneyFormatProvider` + `useMoneyFormat`
+- [x] B.8 GREEN `src/components/money-cell.tsx` — `"use client"` `MoneyCell` for TanStack column `cell` closures
+- [x] B.9 GREEN `src/app/(dashboard)/layout.tsx` — convert to `async`, mount `MoneyFormatProvider` for the authenticated shell
+- [x] B.10 GREEN 5 client call sites via `useMoneyFormat()` — `cash/components/{close-session-form,movement-table,arqueo-badge,today-cash-payments,session-summary-card}.tsx`
+- [x] B.11 GREEN 2 column-def sites via `<MoneyCell>` — `sales/components/columns.tsx`, `expenses/components/columns.tsx`
+- [x] B.12 GREEN 4 RSC sites via `await getMoneyFormat(supabase)` + `formatMoney` — `app/(dashboard)/dashboard/page.tsx`, `gastos/page.tsx`, `clientes/[id]/page.tsx`, `ventas/[id]/page.tsx`
+- [x] B.13 GREEN `e2e/money.ts` shared helper; rewrite money assertions in `e2e/golden-path.spec.ts` ("6 de 6 sesiones restantes", "5 de 6", payment `29`, remaining `"19,00 €"`, `^Paquete Axilas`) and `e2e/caja.spec.ts` (exact `formatMoney(shortfall, {EUR, es-ES})` string, replacing the `\$`-anchored regex)
+- [x] B.14 GREEN run `pnpm test` + `pnpm playwright test e2e`; confirm golden path + caja green
 
 ## Phase C: Sales picker rework (spec service-catalog R7, R8)
 

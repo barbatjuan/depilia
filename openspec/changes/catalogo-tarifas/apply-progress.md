@@ -117,4 +117,70 @@ RED executed: `Error: ENOENT … 0013_seed_service_catalog.sql` (suite failed to
 
 `delete from package_templates where zone_id in (select id from body_zones where name = any(<35 seeded names>))` then `delete from body_zones where name = any(<35 seeded names>)` (safe — no `client_packages` can reference a just-seeded template). Delete `supabase/migrations/0013_seed_service_catalog.sql` and `tests/integration/catalog/seed.test.ts`. No source files touched.
 
-## Slices B – D2 — NOT STARTED
+## Slice B — Migration 0014 + shared money formatter — DONE
+
+PR 3 (base: `catalogo-tarifas-pr-a2` @ 8a26de4, branch `catalogo-tarifas-pr-b`,
+commit `9307a9f`). Strict TDD. Test runner `pnpm test`. Local Supabase.
+**size:exception** — authored diff ~450+ / ~105 del (user-accepted, as on prior slices).
+
+### Completed tasks
+
+- [x] B.1 – B.14 (all of Phase B)
+
+### Files changed
+
+| File | Action | What |
+|------|--------|------|
+| `supabase/migrations/0014_clinic_currency.sql` | Created | `alter table clinic_settings add column currency text not null default 'EUR' check (currency ~ '^[A-Z]{3}$'), add column locale text not null default 'es-ES'` |
+| `src/lib/supabase/types.ts` | Regenerated | `supabase gen types typescript --local` (currency/locale on `clinic_settings`) |
+| `src/lib/money.ts` | Created | Pure. `MoneyFormat`, `DEFAULT_MONEY_FORMAT = {EUR, es-ES}`, `moneyFormatter` (Map-memoized per `${locale}|${currency}`), `formatMoney`. Currency-default fraction digits; `maximumFractionDigits: 0` dropped. Only money formatter in the app. |
+| `src/features/settings/data/money-format.ts` | Created | `getMoneyFormat(supabase)` wrapped in React `cache()`; `maybeSingle()` on `clinic_settings`; falls back to `DEFAULT_MONEY_FORMAT` when the singleton row is missing |
+| `src/components/money-format-provider.tsx` | Created | `"use client"` — `MoneyFormatProvider` context + `useMoneyFormat()` hook |
+| `src/components/money-cell.tsx` | Created | `"use client"` `<MoneyCell amount={n} />` for TanStack `cell` closures |
+| `src/app/(dashboard)/layout.tsx` | Modified | now `async`; reads `getMoneyFormat` and wraps the shell in `<MoneyFormatProvider>` |
+| `src/features/cash/components/{arqueo-badge,movement-table,today-cash-payments,session-summary-card}.tsx` | Modified | converted to `"use client"`; `Intl.NumberFormat` currency const removed; `useMoneyFormat()` + `formatMoney` |
+| `src/features/cash/components/close-session-form.tsx` | Modified | already client; swapped currency const for `useMoneyFormat()` + `formatMoney` |
+| `src/features/sales/components/columns.tsx`, `src/features/expenses/components/columns.tsx` | Modified | currency const removed; money cells now render `<MoneyCell amount={…} />` |
+| `src/app/(dashboard)/{dashboard,gastos,clientes/[id],ventas/[id]}/page.tsx` | Modified | RSC — `await getMoneyFormat(supabase)` (parallel where a `Promise.all` existed) + `formatMoney` |
+| `e2e/money.ts` | Created | `formatMoney` (Intl from `E2E_CURRENCY`/`E2E_LOCALE`) + `parseMoney` (es-ES grouping/decimal → number) |
+| `e2e/global-setup.ts` | Modified | new `ensureClinicSettings()` upserts `clinic_settings {id:true, currency:E2E_CURRENCY, locale:E2E_LOCALE}` (self-healing after `resetDatabase` truncate) |
+| `e2e/golden-path.spec.ts` | Modified | dropped inline `es-AR`/`ARS` formatter; remaining-balance assertion uses `formatMoney(19)` → `19,00 €`; month-revenue KPI parsed via `parseMoney`; sell-package option `.first()` (see deviation 1) |
+| `e2e/caja.spec.ts` | Modified | theoretical parsed via `parseMoney`; shortfall assertion is exact `formatMoney(shortfall)` instead of a `\$`-anchored regex |
+| `tests/unit/lib/money.test.ts` | Created | 6 specs — EUR/es-ES fraction digits, determinism per (currency, locale), grouping, no hardcoded fallback (GBP/USD), `DEFAULT_MONEY_FORMAT`, `moneyFormatter` memoization identity |
+| `tests/unit/lib/no-hardcoded-currency.test.ts` | Created | repo-guard: walks `src/`, asserts no `Intl.NumberFormat(… currency …)` and no `'ARS'` literal outside `src/lib/money.ts` |
+| `tests/integration/catalog/clinic-currency.test.ts` | Created | 4 specs (real local Postgres): defaults `EUR`/`es-ES`; currency+locale update persists, `sales.total` unchanged; `~ '^[A-Z]{3}$'` rejects `'eur'` (23514); non-staff JWT → 0 rows read, RLS-filtered update changes nothing |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| B.1 | `tests/unit/lib/money.test.ts` | Unit | N/A (new) | ✅ import fails — no `src/lib/money.ts` | ✅ 6/6 | ✅ EUR + USD + GBP + ARS grouping + zero + memo identity | ➖ None |
+| B.2 | `tests/unit/lib/no-hardcoded-currency.test.ts` | Unit | N/A (new) | ✅ 11 offender files listed | ✅ Passed after all 13 sites migrated | ✅ two independent checks (`currency:` option + `'ARS'` literal) | ➖ None |
+| B.3 | `tests/integration/catalog/clinic-currency.test.ts` | Integration | N/A (new) | ✅ `column clinic_settings.currency does not exist` | ✅ 4/4 after 0014 applied | ✅ default + update-persist + CHECK reject + RLS denial | ➖ None |
+| B.4 | (migration — verified by B.3) | Integration | N/A (new) | ✅ | ✅ | ✅ forced by B.3 | ➖ None |
+| B.5–B.12 | `no-hardcoded-currency.test.ts` + full `pnpm test` + golden path | Unit + E2E | ✅ 243-test suite + golden path | ✅ guard RED lists every site | ✅ guard green, suite 243/243 | ✅ RSC / client-hook / column-cell paths each exercised | ➖ None |
+| B.13 | `e2e/golden-path.spec.ts`, `e2e/caja.spec.ts` | E2E | ✅ pre-existing golden path + caja | ✅ old `es-AR` assertions fail vs EUR render | ✅ 4/4 e2e | ✅ remaining-balance string + caja shortfall string + parsed KPIs | ➖ None |
+
+### Test / lint / typecheck / e2e results
+
+- `pnpm typecheck` — pass (0 errors)
+- `pnpm lint` — pass (0 warnings)
+- `pnpm test` — 54 files, **243 passed** / 0 failed (was 231; +12 from money.test.ts 6, no-hardcoded-currency.test.ts 2, clinic-currency.test.ts 4)
+- `pnpm e2e` — **4 passed** (golden-path, caja, 2× login) after `supabase db reset`
+
+### Deviations from design
+
+1. `e2e/golden-path.spec.ts` sell-package option selector gains `.first()`. Migration 0013 (Slice A2) seeds an `Axilas` tariff per gender, so `getByRole("option", { name: /^Axilas/ })` matches 2 elements after a full `supabase db reset`. This is a **pre-existing** ambiguity (verified failing on branch tip `8a26de4` before this slice) that Slice C's gender filter resolves properly; `.first()` keeps the golden path green in the interim — either Axilas bono is a valid 6-session package for the assertion.
+2. Added `parseMoney` to `e2e/money.ts` (design named only a formatter). The caja spec reads the rendered theoretical balance back into a number; `[^\d]`-stripping breaks on `es-ES` (`15.000,00 €` → `1500000`), so a locale-aware inverse is required. Also applied to the golden-path month-revenue KPI for correctness.
+3. The 4 cash sub-components (`arqueo-badge`, `movement-table`, `today-cash-payments`, `session-summary-card`) were server components; converted to `"use client"` so `useMoneyFormat()` works. They are pure presentational (no server-only imports) and always render under the dashboard layout provider. `close-session-form` was already client. = the design's "5 client call sites".
+4. Unit-test count higher than the design's estimate: the repo-guard + 6 formatter specs + 4 integration specs (~199 test lines) are the bulk of the authored overrun. size:exception accepted.
+
+### Authored line count
+
+~450 added / ~105 deleted ≈ **~555 authored** (excludes generated `src/lib/supabase/types.ts`). Design estimated ~322. Overrun is tests (~199 lines across 3 new spec files) + the `e2e/money.ts` helper; production code (`money.ts`, `money-format.ts`, provider, cell, layout, 13 call-site edits) is close to estimate. **size:exception** — user pre-accepted for this slice.
+
+### Rollback boundary
+
+`git revert 9307a9f`. Migration 0014's `currency`/`locale` columns are inert if left (nothing reads them after a revert). No data migration, no amount conversion. `clients`/`sales`/`payments` untouched.
+
+## Slices C – D2 — NOT STARTED
