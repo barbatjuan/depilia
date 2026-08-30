@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -8,12 +10,8 @@ import {
 } from "@/components/ui/table";
 import type { CashMovementRow } from "@/features/cash/data/cash-movements";
 import { signedAmount } from "@/features/cash/domain/movement";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
+import { formatMoney } from "@/lib/money";
+import { useMoneyFormat } from "@/components/money-format-provider";
 
 const timeFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -32,6 +30,7 @@ const KIND_LABEL: Record<string, string> = {
  * expression as the theoretical view and the close trigger.
  */
 export function MovementTable({ movements }: { movements: CashMovementRow[] }) {
+  const moneyFormat = useMoneyFormat();
   if (movements.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -66,7 +65,7 @@ export function MovementTable({ movements }: { movements: CashMovementRow[] }) {
                 }`}
               >
                 {signed < 0 ? "-" : "+"}
-                {currencyFormatter.format(Math.abs(signed))}
+                {formatMoney(Math.abs(signed), moneyFormat)}
               </TableCell>
             </TableRow>
           );

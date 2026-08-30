@@ -6,18 +6,14 @@ import {
   Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { formatMoney } from "@/lib/money";
+import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { getDashboardKpis } from "@/features/dashboard/data/get-kpis";
 import { getTodaySchedule } from "@/features/dashboard/data/get-today-schedule";
 import { getWeekSchedule } from "@/features/dashboard/data/get-week-schedule";
 import { KpiCard } from "@/components/kpi-card";
 import { TodayScheduleWidget } from "@/features/dashboard/components/today-schedule-widget";
 import { WeekScheduleWidget } from "@/features/dashboard/components/week-schedule-widget";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 const todayLabel = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -28,6 +24,7 @@ const todayLabel = new Intl.DateTimeFormat("es-AR", {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const moneyFormat = await getMoneyFormat(supabase);
   const [kpis, todaySchedule, weekSchedule] = await Promise.all([
     getDashboardKpis(supabase),
     getTodaySchedule(supabase),
@@ -55,7 +52,7 @@ export default async function DashboardPage() {
           />
           <KpiCard
             label="Ingresos del mes"
-            value={currencyFormatter.format(kpis.monthRevenue)}
+            value={formatMoney(kpis.monthRevenue, moneyFormat)}
             icon={TrendingUp}
           />
           <KpiCard

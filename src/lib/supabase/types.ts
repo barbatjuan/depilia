@@ -326,19 +326,25 @@ export type Database = {
       clinic_settings: {
         Row: {
           clinic_name: string | null
+          currency: string
           id: boolean
+          locale: string
           reminder_hours: number
           timezone: string
         }
         Insert: {
           clinic_name?: string | null
+          currency?: string
           id?: boolean
+          locale?: string
           reminder_hours?: number
           timezone?: string
         }
         Update: {
           clinic_name?: string | null
+          currency?: string
           id?: boolean
+          locale?: string
           reminder_hours?: number
           timezone?: string
         }

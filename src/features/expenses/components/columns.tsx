@@ -4,16 +4,11 @@ import type { ExpenseRow } from "@/features/expenses/data/expenses";
 import { EXPENSE_METHOD_LABEL } from "@/features/expenses/schema";
 import { Button } from "@/components/ui/button";
 import { DeleteExpenseButton } from "@/features/expenses/components/delete-expense-button";
+import { MoneyCell } from "@/components/money-cell";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
   dateStyle: "medium",
-});
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
 });
 
 export const expenseColumns: ColumnDef<ExpenseRow>[] = [
@@ -44,7 +39,7 @@ export const expenseColumns: ColumnDef<ExpenseRow>[] = [
   {
     id: "amount",
     header: "Monto",
-    cell: ({ row }) => currencyFormatter.format(row.original.amount),
+    cell: ({ row }) => <MoneyCell amount={row.original.amount} />,
   },
   {
     id: "actions",

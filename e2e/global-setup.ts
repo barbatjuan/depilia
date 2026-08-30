@@ -110,10 +110,27 @@ export default async function globalSetup() {
   const service = serviceRoleClient();
 
   await ensureAdminStaffUser(service);
+  await ensureClinicSettings(service);
   const zoneId = await ensureBodyZone(service, E2E_PACKAGE_TEMPLATE_ZONE);
   await ensurePackageTemplate(service, zoneId);
   await ensureExpenseCategory(service, E2E_EXPENSE_CATEGORY_NAME);
   await ensureOpenCajaToday(service);
+}
+
+/**
+ * Seeds the singleton `clinic_settings` row with a deterministic currency +
+ * locale (spec clinic-currency R5) so the golden-path money assertions check
+ * formatting for exactly that pair, not the production default. Self-healing:
+ * `resetDatabase` (Vitest integration) truncates this table.
+ */
+async function ensureClinicSettings(service: SupabaseClient<Database>) {
+  const { error } = await service
+    .from("clinic_settings")
+    .upsert(
+      { id: true, currency: E2E_CURRENCY, locale: E2E_LOCALE },
+      { onConflict: "id" },
+    );
+  if (error) throw error;
 }
 
 async function ensureAdminStaffUser(service: SupabaseClient<Database>) {

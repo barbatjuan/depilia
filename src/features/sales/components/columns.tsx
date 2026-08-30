@@ -1,16 +1,11 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SaleListRow } from "@/features/sales/data/sales";
 import { SaleStatusBadge } from "@/features/sales/components/sale-status-badge";
+import { MoneyCell } from "@/components/money-cell";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
   dateStyle: "medium",
-});
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
 });
 
 export const saleColumns: ColumnDef<SaleListRow>[] = [
@@ -34,17 +29,17 @@ export const saleColumns: ColumnDef<SaleListRow>[] = [
   {
     id: "total",
     header: "Total",
-    cell: ({ row }) => currencyFormatter.format(row.original.balance.total),
+    cell: ({ row }) => <MoneyCell amount={row.original.balance.total} />,
   },
   {
     id: "paid",
     header: "Pagado",
-    cell: ({ row }) => currencyFormatter.format(row.original.balance.paid),
+    cell: ({ row }) => <MoneyCell amount={row.original.balance.paid} />,
   },
   {
     id: "balance",
     header: "Saldo",
-    cell: ({ row }) => currencyFormatter.format(row.original.balance.balance),
+    cell: ({ row }) => <MoneyCell amount={row.original.balance.balance} />,
   },
   {
     id: "status",

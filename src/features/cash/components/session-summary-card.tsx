@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -9,12 +11,8 @@ import type { CashSessionRow } from "@/features/cash/data/cash-session";
 import type { TheoreticalRow } from "@/features/cash/data/cash-balance";
 import { deriveArqueo } from "@/features/cash/domain/arqueo";
 import { ArqueoBadge } from "@/features/cash/components/arqueo-badge";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
+import { formatMoney } from "@/lib/money";
+import { useMoneyFormat } from "@/components/money-format-provider";
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -43,6 +41,8 @@ export function SessionSummaryCard({
   session: CashSessionRow;
   theoretical: TheoreticalRow | null;
 }) {
+  const moneyFormat = useMoneyFormat();
+  const currencyFormat = (n: number) => formatMoney(n, moneyFormat);
   const isOpen = session.status === "open";
   const arqueo =
     session.countedAmount !== null && session.theoreticalAmount !== null
@@ -67,26 +67,26 @@ export function SessionSummaryCard({
       <CardContent>
         <Line
           label="Apertura"
-          value={currencyFormatter.format(session.openingAmount)}
+          value={currencyFormat(session.openingAmount)}
         />
         {isOpen && theoretical ? (
           <>
             <Line
               label="Cobros en efectivo"
-              value={currencyFormatter.format(theoretical.cashPayments)}
+              value={currencyFormat(theoretical.cashPayments)}
             />
             <Line
               label="Movimientos"
-              value={currencyFormatter.format(theoretical.movementsNet)}
+              value={currencyFormat(theoretical.movementsNet)}
             />
             <Line
               label="Gastos en efectivo"
-              value={`-${currencyFormatter.format(theoretical.cashExpenses)}`}
+              value={`-${currencyFormat(theoretical.cashExpenses)}`}
             />
             <div className="mt-2 flex items-center justify-between border-t pt-2 text-sm">
               <span className="font-medium">Teórico</span>
               <span className="text-lg font-semibold tabular-nums">
-                {currencyFormatter.format(theoretical.theoretical)}
+                {currencyFormat(theoretical.theoretical)}
               </span>
             </div>
           </>
@@ -95,11 +95,11 @@ export function SessionSummaryCard({
           <>
             <Line
               label="Teórico"
-              value={currencyFormatter.format(session.theoreticalAmount ?? 0)}
+              value={currencyFormat(session.theoreticalAmount ?? 0)}
             />
             <Line
               label="Contado"
-              value={currencyFormatter.format(session.countedAmount ?? 0)}
+              value={currencyFormat(session.countedAmount ?? 0)}
             />
             <div className="mt-2 flex items-center justify-between border-t pt-2 text-sm">
               <span className="font-medium">Resultado</span>

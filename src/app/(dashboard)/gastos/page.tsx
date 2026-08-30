@@ -3,16 +3,12 @@ import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/kpi-card";
 import { createClient } from "@/lib/supabase/server";
+import { formatMoney } from "@/lib/money";
+import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { listExpenses } from "@/features/expenses/data/expenses";
 import { ExpenseTable } from "@/features/expenses/components/expense-table";
 import { currentMonthRange, sumExpenses } from "@/features/expenses/domain/month-total";
 import { CLOSED_CAJA_WARNING } from "@/features/cash/domain/closed-caja-warning";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 export default async function GastosPage({
   searchParams,
@@ -21,6 +17,7 @@ export default async function GastosPage({
 }) {
   const { aviso } = await searchParams;
   const supabase = await createClient();
+  const moneyFormat = await getMoneyFormat(supabase);
   const [expenses, month] = await Promise.all([
     listExpenses(supabase),
     Promise.resolve(currentMonthRange(new Date())),
@@ -55,7 +52,7 @@ export default async function GastosPage({
       <div className="grid grid-cols-1 gap-4 sm:max-w-xs">
         <KpiCard
           label="Total del mes"
-          value={currencyFormatter.format(monthTotal)}
+          value={formatMoney(monthTotal, moneyFormat)}
           icon={Wallet}
         />
       </div>

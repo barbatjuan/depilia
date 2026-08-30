@@ -9,14 +9,9 @@ import {
   E2E_PACKAGE_TEMPLATE_SESSIONS,
   E2E_PACKAGE_TEMPLATE_ZONE,
 } from "./global-setup";
+import { formatMoney, parseMoney } from "./money";
 
 const CLINIC_TZ = "America/Argentina/Buenos_Aires";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 /**
  * The full MVP golden path, end to end, against the real local Supabase
@@ -67,8 +62,12 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     const sellDialog = page.getByRole("dialog");
 
     await sellDialog.getByRole("combobox", { name: "Paquete" }).click();
+    // Migration 0013 seeds an "Axilas" tariff for each gender, so the option
+    // name is not unique until the Slice C gender filter lands — either
+    // Axilas bono is a valid 6-session package for this assertion.
     await page
       .getByRole("option", { name: new RegExp(`^${E2E_PACKAGE_TEMPLATE_NAME}`) })
+      .first()
       .click();
     await sellDialog.getByRole("button", { name: "Vender paquete" }).click();
 
@@ -152,7 +151,7 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     await expect(page.getByText("Parcial")).toBeVisible();
     await expect(
       page
-        .getByText(currencyFormatter.format(saleBalanceRemaining), {
+        .getByText(formatMoney(saleBalanceRemaining), {
           exact: true,
         })
         .first(),
@@ -186,7 +185,7 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     expect(Number(activeClients)).toBeGreaterThanOrEqual(1);
 
     const monthRevenueText = await getKpiValue(page, "Ingresos del mes");
-    const monthRevenue = Number(monthRevenueText.replace(/[^\d]/g, ""));
+    const monthRevenue = parseMoney(monthRevenueText);
     expect(monthRevenue).toBeGreaterThan(0);
     expect(monthRevenue).toBeGreaterThanOrEqual(saleAmountPaid);
   });

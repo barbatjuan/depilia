@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Mail, Pencil, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { formatMoney } from "@/lib/money";
+import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { getClient } from "@/features/clients/data/clients";
 import {
   getClientAppointments,
@@ -31,12 +33,6 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeStyle: "short",
 });
 
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
-
 const APPOINTMENT_STATUS_LABEL: Record<string, string> = {
   scheduled: "Programado",
   completed: "Completado",
@@ -64,13 +60,14 @@ export default async function ClienteFichaPage({
   const client = await getClient(supabase, id);
   if (!client) notFound();
 
-  const [packages, appointments, packageTemplates, zones, sales] =
+  const [packages, appointments, packageTemplates, zones, sales, moneyFormat] =
     await Promise.all([
       getClientPackages(supabase, id),
       getClientAppointments(supabase, id),
       listActivePackageTemplates(supabase),
       listActiveBodyZones(supabase),
       listSales(supabase, { clientId: id }),
+      getMoneyFormat(supabase),
     ]);
   const packageSummaries = summarizeClientPackages(packages);
   const activePackages = packageSummaries.filter((p) => p.status === "active");
@@ -207,7 +204,7 @@ export default async function ClienteFichaPage({
                       <p className="font-medium">{sale.description}</p>
                       <p className="text-sm text-muted-foreground">
                         {dateFormatter.format(new Date(sale.soldAt))} —{" "}
-                        {currencyFormatter.format(sale.balance.total)}
+                        {formatMoney(sale.balance.total, moneyFormat)}
                       </p>
                     </div>
                     <SaleStatusBadge status={sale.balance.status} />

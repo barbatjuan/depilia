@@ -1,11 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import type { TodayCashPayment } from "@/features/cash/data/cash-balance";
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
+import { formatMoney } from "@/lib/money";
+import { useMoneyFormat } from "@/components/money-format-provider";
 
 const timeFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -22,6 +20,7 @@ export function TodayCashPayments({
 }: {
   payments: TodayCashPayment[];
 }) {
+  const moneyFormat = useMoneyFormat();
   if (payments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -59,7 +58,7 @@ export function TodayCashPayments({
               </p>
             </div>
             <span className="font-medium tabular-nums">
-              {currencyFormatter.format(payment.amount)}
+              {formatMoney(payment.amount, moneyFormat)}
             </span>
           </li>
         );

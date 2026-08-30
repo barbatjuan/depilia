@@ -1,17 +1,15 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { ARQUEO_LABEL, type ArqueoStatus } from "@/features/cash/domain/arqueo";
+import { formatMoney } from "@/lib/money";
+import { useMoneyFormat } from "@/components/money-format-provider";
 
 const STATUS_VARIANT: Record<ArqueoStatus, "default" | "secondary" | "destructive"> = {
   sobrante: "default",
   faltante: "destructive",
   exacto: "secondary",
 };
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 /**
  * Renders the end-of-day arqueo outcome (spec: "cash-register / Closing
@@ -25,12 +23,13 @@ export function ArqueoBadge({
   status: ArqueoStatus;
   difference: number;
 }) {
+  const moneyFormat = useMoneyFormat();
   return (
     <span className="inline-flex items-center gap-2">
       <Badge variant={STATUS_VARIANT[status]}>{ARQUEO_LABEL[status]}</Badge>
       {status !== "exacto" ? (
         <span className="text-sm font-medium tabular-nums">
-          {currencyFormatter.format(Math.abs(difference))}
+          {formatMoney(Math.abs(difference), moneyFormat)}
         </span>
       ) : null}
     </span>

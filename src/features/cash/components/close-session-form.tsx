@@ -7,14 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CashActionState } from "@/features/cash/actions/open-session";
 import { deriveArqueo, ARQUEO_LABEL } from "@/features/cash/domain/arqueo";
+import { formatMoney } from "@/lib/money";
+import { useMoneyFormat } from "@/components/money-format-provider";
 
 const initialState: CashActionState = { error: null };
-
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
 
 /**
  * "Cerrar caja" arqueo form (spec: "cash-register / Closing arqueo"). Shows
@@ -35,6 +31,7 @@ export function CloseSessionForm({
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [counted, setCounted] = useState("");
+  const moneyFormat = useMoneyFormat();
 
   const parsedCounted = Number(counted);
   const preview =
@@ -47,7 +44,7 @@ export function CloseSessionForm({
       <div className="flex items-center justify-between rounded-md border p-3 text-sm">
         <span className="text-muted-foreground">Teórico esperado</span>
         <span className="font-semibold tabular-nums">
-          {currencyFormatter.format(theoretical)}
+          {formatMoney(theoretical, moneyFormat)}
         </span>
       </div>
       <div className="flex flex-col gap-2 sm:max-w-xs">
@@ -67,7 +64,7 @@ export function CloseSessionForm({
         <p role="status" className="text-sm">
           {ARQUEO_LABEL[preview.status]}
           {preview.status !== "exacto"
-            ? `: ${currencyFormatter.format(Math.abs(preview.difference))}`
+            ? `: ${formatMoney(Math.abs(preview.difference), moneyFormat)}`
             : ""}
         </p>
       ) : null}

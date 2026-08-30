@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { formatMoney } from "@/lib/money";
+import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { getSale } from "@/features/sales/data/sales";
 import { registerPaymentAction } from "@/features/sales/actions/register-payment";
 import { RegisterPaymentForm } from "@/features/sales/components/register-payment-form";
@@ -21,12 +23,6 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeStyle: "short",
 });
 
-const currencyFormatter = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 0,
-});
-
 const METHOD_LABEL: Record<string, string> = {
   cash: "Efectivo",
   card: "Tarjeta",
@@ -41,8 +37,12 @@ export default async function SaleDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const sale = await getSale(supabase, id);
+  const [sale, moneyFormat] = await Promise.all([
+    getSale(supabase, id),
+    getMoneyFormat(supabase),
+  ]);
   if (!sale) notFound();
+  const currencyFormat = (n: number) => formatMoney(n, moneyFormat);
 
   const boundRegisterPayment = registerPaymentAction.bind(null, sale.id);
 
@@ -83,7 +83,7 @@ export default async function SaleDetailPage({
             <div>
               <p className="text-xs text-muted-foreground uppercase">Total</p>
               <p className="text-lg font-semibold">
-                {currencyFormatter.format(sale.balance.total)}
+                {currencyFormat(sale.balance.total)}
               </p>
             </div>
             <div>
@@ -91,13 +91,13 @@ export default async function SaleDetailPage({
                 Pagado
               </p>
               <p className="text-lg font-semibold">
-                {currencyFormatter.format(sale.balance.paid)}
+                {currencyFormat(sale.balance.paid)}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase">Saldo</p>
               <p className="text-lg font-semibold">
-                {currencyFormatter.format(sale.balance.balance)}
+                {currencyFormat(sale.balance.balance)}
               </p>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default async function SaleDetailPage({
                 >
                   <div>
                     <p className="font-medium">
-                      {currencyFormatter.format(payment.amount)}
+                      {currencyFormat(payment.amount)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {dateFormatter.format(new Date(payment.paidAt))} —{" "}
@@ -145,7 +145,7 @@ export default async function SaleDetailPage({
           <CardHeader>
             <CardTitle>Registrar pago</CardTitle>
             <CardDescription>
-              Saldo pendiente: {currencyFormatter.format(sale.balance.balance)}
+              Saldo pendiente: {currencyFormat(sale.balance.balance)}
             </CardDescription>
           </CardHeader>
           <CardContent>

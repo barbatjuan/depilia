@@ -8,6 +8,7 @@ import {
   ensureOpenCajaToday,
 } from "./global-setup";
 import type { Database } from "../src/lib/supabase/types";
+import { formatMoney, parseMoney } from "./money";
 
 config({ path: ".env.local" });
 
@@ -88,7 +89,7 @@ test("caja diaria: abrir -> movimiento -> cerrar con arqueo", async ({ page }) =
       .locator("span.tabular-nums")
       .last()
       .innerText();
-    const theoretical = Number(theoreticalText.replace(/[^\d]/g, ""));
+    const theoretical = parseMoney(theoreticalText);
     expect(theoretical).toBeGreaterThan(0);
 
     const counted = 100;
@@ -100,9 +101,7 @@ test("caja diaria: abrir -> movimiento -> cerrar con arqueo", async ({ page }) =
     const summary = page.locator('[data-slot="card"]', { hasText: "Arqueo final" });
     await expect(summary.getByText("Faltante")).toBeVisible();
     await expect(summary.getByText("Resultado")).toBeVisible();
-    await expect(
-      summary.getByText(new RegExp(`\\$\\s*${shortfall.toLocaleString("es-AR")}`)),
-    ).toBeVisible();
+    await expect(summary.getByText(formatMoney(shortfall))).toBeVisible();
   });
 
   // Restore the shared "caja abierta hoy" fixture the golden path relies on.
