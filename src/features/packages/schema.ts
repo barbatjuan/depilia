@@ -72,14 +72,18 @@ export const sellPackageSchema = z
 export type SellPackageInput = z.infer<typeof sellPackageSchema>;
 
 /**
- * "Sell a loose session" form/action schema (spec: "package-sessions / Sell
- * a loose session"). No template, no session count — just a client, a zone,
- * and a price for a single one-off session.
+ * "Sell a loose session" form/action schema (spec: "service-catalog /
+ * Selling a loose session with a tariff-prefilled price"). The operator
+ * picks a tariff (`templateId`) which drives the prefilled amount; the
+ * amount field stays editable, and a blank value falls back server-side to
+ * the tariff's `session_price`.
  */
 export const sellLooseSessionSchema = z.object({
   clientId: uuid,
-  zoneId: uuid,
-  price: z.coerce.number().positive("El precio debe ser mayor a 0"),
+  templateId: uuid,
+  amount: optionalNumeric.transform((value) =>
+    value === "" ? null : (value as number),
+  ),
 });
 
 export type SellLooseSessionInput = z.infer<typeof sellLooseSessionSchema>;

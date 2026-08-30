@@ -183,4 +183,65 @@ commit `9307a9f`). Strict TDD. Test runner `pnpm test`. Local Supabase.
 
 `git revert 9307a9f`. Migration 0014's `currency`/`locale` columns are inert if left (nothing reads them after a revert). No data migration, no amount conversion. `clients`/`sales`/`payments` untouched.
 
-## Slices C – D2 — NOT STARTED
+## Slice C — Sales picker rework — DONE
+
+PR 4 (base: `catalogo-tarifas-pr-b` @ 6f857e6, branch `catalogo-tarifas-pr-c`).
+Strict TDD. Test runner `pnpm test`. Local Supabase (migrations 0001–0014).
+
+### Completed tasks
+
+- [x] C.1 – C.11 (all of Phase C)
+
+### Files changed
+
+| File | Action | What was done |
+|------|--------|---------------|
+| `src/features/packages/domain/tariff-picker.ts` | Created | Pure `GENDER_LABEL`, `SIZE_LABEL`, `SIZE_ORDER`, `filterTariffs({gender, sizeCategory?})`, `groupTariffsBySize` → ordered non-empty groups (mini→pequena→mediana→grande→cuerpo) |
+| `src/features/packages/domain/sell-package.ts` | Modified | `LooseSessionRequest` reworked: `templateId`/`templateName`/`zoneName`/`sessionPrice`/`amount?`; `buildLooseSessionPayload` prefills `price` from `sessionPrice`, `amount` overrides, throws on non-positive resolved price, returns `templateId`. `buildPackageSalePayload` template branch unchanged (already bono-always from A1) |
+| `src/features/packages/schema.ts` | Modified | `sellLooseSessionSchema` drops `zoneId`, gains `templateId: uuid` + `amount` (optional numeric → `null` when blank) |
+| `src/features/packages/actions/sell-loose-session.ts` | Rewritten | Parses `templateId`/`amount`; resolves tariff via `listActivePackageTemplates`, rejects an archived/missing tariff, falls back to `template.sessionPrice` on blank amount |
+| `src/features/packages/components/sell-package-form.tsx` | Modified | Gender segmented control (buttons, default `mujer`, `aria-pressed`); tariff Select grouped by `SIZE_ORDER` via `SelectGroup`/`SelectLabel`; item label `{name} — bono 6 sesiones ({formatMoney(bonoPrice)})`; selected-tariff summary line "6 sesiones · {bonoPrice}"; gender change resets selection; "Personalizado" branch kept verbatim; uses `useMoneyFormat()` |
+| `src/features/packages/components/sell-loose-session-form.tsx` | Rewritten | Gender control → grouped tariff Select → `amount` input prefilled with `sessionPrice`, stays editable; "Precio sugerido" hint via `useMoneyFormat()` |
+| `src/features/packages/components/package-sale-actions.tsx` | Modified | Passes `templates` to `SellLooseSessionForm` (was `zones`); `zones` still passed to `SellPackageForm` custom branch |
+| `tests/unit/features/packages/tariff-picker.test.ts` | Created | 7 specs — gender filter (mujer/hombre-only areas), size narrowing, group order regardless of input order, empty groups omitted, label maps |
+| `tests/unit/features/packages/loose-session-payload.test.ts` | Created | 4 specs — prefill kept, override applied, override ≤0 rejected, non-positive session_price rejected |
+| `tests/unit/features/packages/sell-package.test.ts` | Modified | Dropped old `buildLooseSessionPayload` block (moved to dedicated file); added "always sells the 6-session bono: total = bono_price even when session_price differs" |
+| `tests/unit/features/packages/schema.test.ts` | Modified | `sellLooseSessionSchema` specs rewritten for `templateId`/`amount` (explicit amount, blank→null, missing tariff rejected) |
+| `tests/integration/sell-package.test.ts` | Modified | Loose-session payload literal gains `templateId: null` (harness — data layer unchanged) |
+| `e2e/golden-path.spec.ts` | Modified | "Vender paquete" step picks gender "Mujer" first, then the now-unambiguous `^Axilas` option; dropped `.first()` workaround |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| C.3 | `tests/unit/features/packages/tariff-picker.test.ts` | Unit | N/A (new) | ✅ import fails — no `tariff-picker.ts` | ✅ 7/7 | ✅ gender both ways + size narrow + shuffled order + empty-group omit + label maps | ➖ None |
+| C.4 | (same) | Unit | N/A (new) | ✅ | ✅ 7/7 | ✅ (see C.3) | ➖ None |
+| C.2 | `tests/unit/features/packages/loose-session-payload.test.ts` | Unit | ✅ old block 2/2 (removed) | ✅ new shape fails to compile/assert | ✅ 4/4 | ✅ prefill vs override vs ≤0 override vs bad session_price | ➖ None |
+| C.5 | `loose-session-payload.test.ts` + `sell-package.test.ts` | Unit | ✅ 4/4 pre-existing package specs | ✅ | ✅ 5/5 package + 4/4 loose | ✅ bono-always with divergent session_price | ➖ None |
+| C.9 | `tests/unit/features/packages/schema.test.ts` | Unit | ✅ 4/4 (old loose specs) | ✅ `zoneId` specs fail on new schema | ✅ 7/7 | ✅ explicit amount + blank→null + missing tariff | ➖ None |
+| C.6 | (select already updated in A1) | — | — | ➖ pre-done A1 | ✅ verified | ➖ | ➖ |
+| C.7 / C.8 / C.10 | `e2e/golden-path.spec.ts` + `pnpm e2e` | E2E | ✅ pre-existing golden path (4/4) | ✅ `.first()` needed pre-slice (2×Axilas) | ✅ 4/4 e2e, gender filter makes option unique | ➖ Single flow | ➖ None |
+| C.11 | full `pnpm test` + `pnpm e2e` | Unit+E2E | ✅ 243→253 | — | ✅ 253/253, 4/4 e2e | — | — |
+
+### Test / lint / typecheck / e2e results
+
+- `pnpm typecheck` — pass (0 errors)
+- `pnpm lint` — pass (0 warnings)
+- `pnpm test` — 56 files, **253 passed** / 0 failed (was 243; +10: tariff-picker 7, loose-session-payload 4, sell-package net +1, schema net -2)
+- `pnpm e2e` — **4 passed** (golden-path, caja, 2× login)
+
+### Deviations from design
+
+1. `buildPackageSalePayload` / `PackageTemplateOption` / `listActivePackageTemplates` select were already reworked in Slice A1 — C.5/C.6 were verification-only, no further production change. The template-branch description keeps the A1 wording `Paquete {name} — {defaultSessions} sesiones ({zoneName})` (already "names the bono"); left unchanged to keep the integration test green.
+2. `LooseSessionPayload` gains `templateId` but the `sell-package.ts` data layer still only reads `description`/`price` — the loose sale links to no package and `sales` has no template column. The integration test passes `templateId: null` explicitly.
+3. Gender control implemented as a two-button toggle group (`aria-pressed`), not a Select — the design allowed "segmented control (or a Select)". `sell-package-form` initial selection is now `Personalizado` (was `templates[0]`) since the visible set depends on the gender filter; the golden path picks the option explicitly so the flow is unaffected.
+
+### Authored line count
+
+~340 added / ~70 deleted ≈ **~330 authored** (production ~180, tests ~150). Within the design's ~345 estimate. No `size:exception` required for this slice.
+
+### Rollback boundary
+
+Revert the Slice C commit on `catalogo-tarifas-pr-c`. `tariff-picker.ts` is new (safe to delete). `package_templates` columns stay harmless. No migration, no data change.
+
+## Slices D1 – D2 — NOT STARTED

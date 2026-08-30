@@ -82,7 +82,7 @@ export function PackageSaleActions({
           <div className="flex flex-col gap-4 px-4 pb-4">
             <SellLooseSessionForm
               action={boundSellLoose}
-              zones={zones}
+              templates={templates}
               onSuccess={() => setLooseOpen(false)}
             />
           </div>

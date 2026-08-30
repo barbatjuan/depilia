@@ -79,17 +79,17 @@ Strict TDD: a RED test precedes every GREEN task. SQL invariants are tested agai
 
 ## Phase C: Sales picker rework (spec service-catalog R7, R8)
 
-- [ ] C.1 RED unit: `buildPackageSalePayload` — `bonoPrice` → `sales.total`, `defaultSessions` (6) → `total_sessions` — `tests/unit/features/packages/build-package-sale-payload.test.ts`
-- [ ] C.2 RED unit: loose-session payload — `price` prefilled from `sessionPrice` kept vs operator-overridden — `tests/unit/features/packages/loose-session-payload.test.ts`
-- [ ] C.3 RED unit: `filterTariffs(all, {gender, sizeCategory?})` + `groupTariffsBySize` — `tests/unit/features/packages/tariff-picker.test.ts`
-- [ ] C.4 GREEN `src/features/packages/domain/tariff-picker.ts` — `GENDER_LABEL`, `SIZE_LABEL`, `SIZE_ORDER`, `filterTariffs`, `groupTariffsBySize`
-- [ ] C.5 GREEN `src/features/sales/domain/sell-package.ts` — `PackageTemplateOption` gains `gender`, `sizeCategory`, `sessionPrice`, renames `price`→`bonoPrice`; `buildPackageSalePayload` maps `totalSessions = defaultSessions`, `price = bonoPrice`; `LooseSessionRequest` gains `templateId: string | null`
-- [ ] C.6 GREEN `listActivePackageTemplates` select → `"id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, body_zones(name)"`
-- [ ] C.7 GREEN `sell-package-form.tsx` — gender segmented control (default `mujer`) above the Select; options grouped by `SIZE_ORDER` with SelectGroup/SelectLabel; item label `{name} — bono 6 sesiones ({formatMoney(bonoPrice)})`; changing gender resets selection; keep "Personalizado" branch verbatim
-- [ ] C.8 GREEN `sell-loose-session-form.tsx` — replace `zones` Select with gender filter + tariff Select; selecting a tariff sets the controlled `price` input to `sessionPrice`, field stays editable
-- [ ] C.9 GREEN `sellLooseSessionSchema` gains `templateId: uuid`, drops standalone `zoneId`; `sellLooseSessionAction` resolves via `listActivePackageTemplates`, rejects an archived tariff, falls back to `template.sessionPrice` on a blank price
-- [ ] C.10 GREEN `PackageSaleActions` passes `templates` to both sheets; `zones` remains only for the custom package branch
-- [ ] C.11 GREEN run `pnpm test tests/unit/features/packages` + golden path
+- [x] C.1 RED unit: `buildPackageSalePayload` — `bonoPrice` → `sales.total`, `defaultSessions` (6) → `total_sessions` — `tests/unit/features/packages/build-package-sale-payload.test.ts`
+- [x] C.2 RED unit: loose-session payload — `price` prefilled from `sessionPrice` kept vs operator-overridden — `tests/unit/features/packages/loose-session-payload.test.ts`
+- [x] C.3 RED unit: `filterTariffs(all, {gender, sizeCategory?})` + `groupTariffsBySize` — `tests/unit/features/packages/tariff-picker.test.ts`
+- [x] C.4 GREEN `src/features/packages/domain/tariff-picker.ts` — `GENDER_LABEL`, `SIZE_LABEL`, `SIZE_ORDER`, `filterTariffs`, `groupTariffsBySize`
+- [x] C.5 GREEN `src/features/sales/domain/sell-package.ts` — `PackageTemplateOption` gains `gender`, `sizeCategory`, `sessionPrice`, renames `price`→`bonoPrice`; `buildPackageSalePayload` maps `totalSessions = defaultSessions`, `price = bonoPrice`; `LooseSessionRequest` gains `templateId: string | null`
+- [x] C.6 GREEN `listActivePackageTemplates` select → `"id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, body_zones(name)"`
+- [x] C.7 GREEN `sell-package-form.tsx` — gender segmented control (default `mujer`) above the Select; options grouped by `SIZE_ORDER` with SelectGroup/SelectLabel; item label `{name} — bono 6 sesiones ({formatMoney(bonoPrice)})`; changing gender resets selection; keep "Personalizado" branch verbatim
+- [x] C.8 GREEN `sell-loose-session-form.tsx` — replace `zones` Select with gender filter + tariff Select; selecting a tariff sets the controlled `price` input to `sessionPrice`, field stays editable
+- [x] C.9 GREEN `sellLooseSessionSchema` gains `templateId: uuid`, drops standalone `zoneId`; `sellLooseSessionAction` resolves via `listActivePackageTemplates`, rejects an archived tariff, falls back to `template.sessionPrice` on a blank price
+- [x] C.10 GREEN `PackageSaleActions` passes `templates` to both sheets; `zones` remains only for the custom package branch
+- [x] C.11 GREEN run `pnpm test tests/unit/features/packages` + golden path
 
 ## Phase D1: `/configuracion/tarifas` ABM — archive-only (spec service-catalog R4, R6)
 

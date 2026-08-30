@@ -61,13 +61,13 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     await page.getByRole("button", { name: "Vender paquete" }).click();
     const sellDialog = page.getByRole("dialog");
 
+    // Migration 0013 seeds an "Axilas" tariff for each gender; pick the
+    // gender first so the size-grouped Paquete Select shows exactly one
+    // Axilas option (mujer — matches E2E_PACKAGE_TEMPLATE_GENDER).
+    await sellDialog.getByRole("button", { name: "Mujer" }).click();
     await sellDialog.getByRole("combobox", { name: "Paquete" }).click();
-    // Migration 0013 seeds an "Axilas" tariff for each gender, so the option
-    // name is not unique until the Slice C gender filter lands — either
-    // Axilas bono is a valid 6-session package for this assertion.
     await page
       .getByRole("option", { name: new RegExp(`^${E2E_PACKAGE_TEMPLATE_NAME}`) })
-      .first()
       .click();
     await sellDialog.getByRole("button", { name: "Vender paquete" }).click();
 

@@ -97,6 +97,7 @@ describe.sequential("sell-package data layer", () => {
     const result = await sellLooseSession(db, {
       clientId: client.id,
       payload: {
+        templateId: null,
         description: `Sesión suelta — ${zone.name}`,
         price: 15000,
       },

@@ -60,31 +60,33 @@ describe("sellPackageSchema", () => {
 });
 
 describe("sellLooseSessionSchema", () => {
-  it("accepts a valid loose-session sale", () => {
+  it("accepts a tariff-driven loose-session sale with an explicit amount", () => {
     const result = sellLooseSessionSchema.safeParse({
       clientId: "11111111-1111-1111-1111-111111111111",
-      zoneId: "33333333-3333-3333-3333-333333333333",
-      price: "15000",
+      templateId: "33333333-3333-3333-3333-333333333333",
+      amount: "15000",
     });
 
     expect(result.success).toBe(true);
+    if (result.success) expect(result.data.amount).toBe(15000);
   });
 
-  it("rejects a missing zone", () => {
+  it("accepts a blank amount (server falls back to the tariff session_price)", () => {
     const result = sellLooseSessionSchema.safeParse({
       clientId: "11111111-1111-1111-1111-111111111111",
-      zoneId: "",
-      price: "15000",
+      templateId: "33333333-3333-3333-3333-333333333333",
+      amount: "",
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.amount).toBeNull();
   });
 
-  it("rejects a non-positive price", () => {
+  it("rejects a missing tariff", () => {
     const result = sellLooseSessionSchema.safeParse({
       clientId: "11111111-1111-1111-1111-111111111111",
-      zoneId: "33333333-3333-3333-3333-333333333333",
-      price: "0",
+      templateId: "",
+      amount: "15000",
     });
 
     expect(result.success).toBe(false);

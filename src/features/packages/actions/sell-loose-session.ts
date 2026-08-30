@@ -4,15 +4,17 @@ import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseClient } from "@/lib/supabase/server";
 import { sellLooseSessionSchema } from "@/features/packages/schema";
 import { buildLooseSessionPayload } from "@/features/packages/domain/sell-package";
-import { listActiveBodyZones } from "@/features/packages/data/package-templates";
+import { listActivePackageTemplates } from "@/features/packages/data/package-templates";
 import { sellLooseSession } from "@/features/packages/data/sell-package";
 
 export type SellLooseSessionFormState = { error: string | null };
 
 /**
  * Server action backing the "vender sesión suelta" ficha form. Bound with
- * the client id via `.bind(null, clientId)`. Creates a `sales` row with no
- * `client_package_id` — a one-off trial session, not a package.
+ * the client id via `.bind(null, clientId)`. The operator picks a tariff;
+ * the amount is prefilled from the tariff's `session_price` and editable.
+ * Creates a `sales` row with no `client_package_id` — a one-off session,
+ * not a package.
  */
 export async function sellLooseSessionAction(
   clientId: string,
@@ -21,8 +23,8 @@ export async function sellLooseSessionAction(
 ): Promise<SellLooseSessionFormState> {
   const parsed = sellLooseSessionSchema.safeParse({
     clientId,
-    zoneId: formData.get("zoneId"),
-    price: formData.get("price"),
+    templateId: formData.get("templateId"),
+    amount: formData.get("amount"),
   });
 
   if (!parsed.success) {
@@ -37,16 +39,18 @@ export async function sellLooseSessionAction(
   const supabase = await createSupabaseClient();
 
   try {
-    const zones = await listActiveBodyZones(supabase);
-    const zone = zones.find((z) => z.id === parsed.data.zoneId);
-    if (!zone) {
-      return { error: "La zona seleccionada ya no está disponible." };
+    const templates = await listActivePackageTemplates(supabase);
+    const template = templates.find((t) => t.id === parsed.data.templateId);
+    if (!template) {
+      return { error: "La tarifa seleccionada ya no está disponible." };
     }
 
     const payload = buildLooseSessionPayload({
-      zoneId: zone.id,
-      zoneName: zone.name,
-      price: parsed.data.price,
+      templateId: template.id,
+      templateName: template.name,
+      zoneName: template.zoneName,
+      sessionPrice: template.sessionPrice,
+      amount: parsed.data.amount,
     });
 
     await sellLooseSession(supabase, { clientId, payload });

@@ -76,30 +76,42 @@ export function buildPackageSalePayload(
 }
 
 export type LooseSessionRequest = {
-  zoneId: string;
+  templateId: string | null;
+  templateName: string;
   zoneName: string;
-  price: number;
+  sessionPrice: number;
+  amount?: number | null;
 };
 
 export type LooseSessionPayload = {
+  templateId: string | null;
   description: string;
   price: number;
 };
 
 /**
  * Pure computation of a loose/single-session sale payload (spec:
- * "package-sessions / Sell a loose session"). No `client_packages` row is
- * ever produced from this — the sale is tied only to a client and a zone.
+ * "service-catalog / Selling a loose session with a tariff-prefilled
+ * price"). The operator picks a tariff; the amount field is prefilled with
+ * the tariff's `session_price` and stays editable, so `amount` overrides the
+ * prefill when present. No `client_packages` row is ever produced — the sale
+ * is tied only to the client.
  */
 export function buildLooseSessionPayload(
   request: LooseSessionRequest,
 ): LooseSessionPayload {
-  if (request.price <= 0) {
+  const price =
+    request.amount === undefined || request.amount === null
+      ? request.sessionPrice
+      : request.amount;
+
+  if (price <= 0) {
     throw new Error("El precio debe ser mayor a 0");
   }
 
   return {
+    templateId: request.templateId,
     description: `Sesión suelta — ${request.zoneName}`,
-    price: request.price,
+    price,
   };
 }

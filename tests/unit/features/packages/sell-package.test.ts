@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildPackageSalePayload,
-  buildLooseSessionPayload,
-} from "@/features/packages/domain/sell-package";
+import { buildPackageSalePayload } from "@/features/packages/domain/sell-package";
 
 describe("buildPackageSalePayload", () => {
   it("derives totals from a package template (spec: package sale creates client_package)", () => {
@@ -71,29 +68,25 @@ describe("buildPackageSalePayload", () => {
       }),
     ).toThrow("El precio debe ser mayor a 0");
   });
-});
 
-describe("buildLooseSessionPayload", () => {
-  it("builds a loose-session sale payload tied only to client + zone (no client_package)", () => {
-    const payload = buildLooseSessionPayload({
-      zoneId: "zone-3",
-      zoneName: "Rostro",
-      price: 15000,
+  it("always sells the 6-session bono: total = bono_price even when session_price differs (spec R7)", () => {
+    const payload = buildPackageSalePayload({
+      source: "template",
+      template: {
+        id: "tpl-9",
+        zoneId: "zone-9",
+        zoneName: "Cavado",
+        name: "Cavado",
+        gender: "mujer",
+        sizeCategory: "mini",
+        defaultSessions: 6,
+        sessionPrice: 10,
+        bonoPrice: 48,
+      },
     });
 
-    expect(payload).toEqual({
-      description: "Sesión suelta — Rostro",
-      price: 15000,
-    });
-  });
-
-  it("rejects a loose session with a non-positive price", () => {
-    expect(() =>
-      buildLooseSessionPayload({
-        zoneId: "zone-3",
-        zoneName: "Rostro",
-        price: -1,
-      }),
-    ).toThrow("El precio debe ser mayor a 0");
+    expect(payload.totalSessions).toBe(6);
+    expect(payload.price).toBe(48);
+    expect(payload.templateId).toBe("tpl-9");
   });
 });
