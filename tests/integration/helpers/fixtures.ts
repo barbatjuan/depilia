@@ -11,9 +11,13 @@ export async function resetDatabase(db: SupabaseClient<Database>) {
     "reminder_log",
     "cash_movements",
     "cash_sessions",
+    "sale_packages",
     "payments",
     "sales",
     "appointments",
+    "promotion_items",
+    "promotions",
+    "discount_codes",
     "client_packages",
     "expenses",
     "expense_categories",
@@ -164,6 +168,85 @@ export async function seedLooseSale(
       client_id: params.client_id,
       description: params.description ?? "Sesión suelta — Test",
       total: params.total ?? 15000,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function seedPromotion(
+  db: SupabaseClient<Database>,
+  params: Partial<{
+    name: string;
+    kind: "combo" | "bonus";
+    valid_from: string | null;
+    valid_to: string | null;
+    active: boolean;
+  }> = {},
+) {
+  const { data, error } = await db
+    .from("promotions")
+    .insert({
+      name: params.name ?? "Promo Test",
+      kind: params.kind ?? "bonus",
+      valid_from: params.valid_from ?? null,
+      valid_to: params.valid_to ?? null,
+      active: params.active ?? true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function seedPromotionItem(
+  db: SupabaseClient<Database>,
+  params: {
+    promotion_id: string;
+    tariff_id: string;
+    bonus_sessions?: number;
+    override_price?: number | null;
+  },
+) {
+  const { data, error } = await db
+    .from("promotion_items")
+    .insert({
+      promotion_id: params.promotion_id,
+      tariff_id: params.tariff_id,
+      bonus_sessions: params.bonus_sessions ?? 0,
+      override_price: params.override_price ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function seedDiscountCode(
+  db: SupabaseClient<Database>,
+  params: Partial<{
+    code: string;
+    kind: "percent" | "fixed";
+    value: number;
+    max_uses: number | null;
+    used_count: number;
+    valid_from: string | null;
+    valid_to: string | null;
+    active: boolean;
+  }> = {},
+) {
+  const { data, error } = await db
+    .from("discount_codes")
+    .insert({
+      code: params.code ?? `CODE-${crypto.randomUUID().slice(0, 8)}`,
+      kind: params.kind ?? "percent",
+      value: params.value ?? 10,
+      max_uses: params.max_uses ?? null,
+      used_count: params.used_count ?? 0,
+      valid_from: params.valid_from ?? null,
+      valid_to: params.valid_to ?? null,
+      active: params.active ?? true,
     })
     .select()
     .single();

@@ -350,6 +350,48 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          max_uses: number | null
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_to: string | null
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           archived: boolean
@@ -489,6 +531,78 @@ export type Database = {
           },
         ]
       }
+      promotion_items: {
+        Row: {
+          bonus_sessions: number
+          id: string
+          override_price: number | null
+          promotion_id: string
+          tariff_id: string
+        }
+        Insert: {
+          bonus_sessions?: number
+          id?: string
+          override_price?: number | null
+          promotion_id: string
+          tariff_id: string
+        }
+        Update: {
+          bonus_sessions?: number
+          id?: string
+          override_price?: number | null
+          promotion_id?: string
+          tariff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_items_tariff_id_fkey"
+            columns: ["tariff_id"]
+            isOneToOne: false
+            referencedRelation: "package_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       reminder_log: {
         Row: {
           appointment_id: string
@@ -524,13 +638,69 @@ export type Database = {
           },
         ]
       }
+      sale_packages: {
+        Row: {
+          client_package_id: string
+          created_at: string
+          id: string
+          sale_id: string
+        }
+        Insert: {
+          client_package_id: string
+          created_at?: string
+          id?: string
+          sale_id: string
+        }
+        Update: {
+          client_package_id?: string
+          created_at?: string
+          id?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_packages_client_package_id_fkey"
+            columns: ["client_package_id"]
+            isOneToOne: true
+            referencedRelation: "client_package_remaining"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_packages_client_package_id_fkey"
+            columns: ["client_package_id"]
+            isOneToOne: true
+            referencedRelation: "client_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_packages_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["sale_id"]
+          },
+          {
+            foreignKeyName: "sale_packages_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           appointment_id: string | null
           client_id: string
           client_package_id: string | null
           description: string
+          discount_amount: number
+          discount_code_id: string | null
+          discount_reason: string | null
+          discounted_by: string | null
           id: string
+          list_total: number | null
+          promotion_id: string | null
           sold_at: string
           status: string
           total: number
@@ -540,7 +710,13 @@ export type Database = {
           client_id: string
           client_package_id?: string | null
           description: string
+          discount_amount?: number
+          discount_code_id?: string | null
+          discount_reason?: string | null
+          discounted_by?: string | null
           id?: string
+          list_total?: number | null
+          promotion_id?: string | null
           sold_at?: string
           status?: string
           total: number
@@ -550,7 +726,13 @@ export type Database = {
           client_id?: string
           client_package_id?: string | null
           description?: string
+          discount_amount?: number
+          discount_code_id?: string | null
+          discount_reason?: string | null
+          discounted_by?: string | null
           id?: string
+          list_total?: number | null
+          promotion_id?: string | null
           sold_at?: string
           status?: string
           total?: number
@@ -582,6 +764,27 @@ export type Database = {
             columns: ["client_package_id"]
             isOneToOne: true
             referencedRelation: "client_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_discounted_by_fkey"
+            columns: ["discounted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
             referencedColumns: ["id"]
           },
         ]
@@ -679,6 +882,20 @@ export type Database = {
     Functions: {
       appointment_end_at: {
         Args: { p_duration_minutes: number; p_scheduled_at: string }
+        Returns: string
+      }
+      create_combo_sale: {
+        Args: {
+          p_client_id: string
+          p_description: string
+          p_discount_amount: number
+          p_discount_code_id?: string
+          p_discount_reason?: string
+          p_discounted_by?: string
+          p_lines?: Json
+          p_list_total: number
+          p_promotion_id: string
+        }
         Returns: string
       }
       current_staff_id: { Args: never; Returns: string }
