@@ -116,13 +116,25 @@ export const sellPackageSchema = z
     zoneId: optionalUuid,
     sessionCount: optionalNumeric,
     price: optionalNumeric,
+    promotionId: optionalUuid,
     ...discountFields,
   })
   .superRefine((data, ctx) => {
     refineManualDiscount(data, ctx);
     const hasTemplate = data.templateId !== "";
+    const hasPromotion = data.promotionId !== "";
     const hasCustom =
       data.zoneId !== "" && data.sessionCount !== "" && data.price !== "";
+
+    if (hasPromotion) {
+      if (hasCustom || hasTemplate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "No se puede combinar una promoción con un paquete a medida.",
+        });
+      }
+      return;
+    }
 
     if (!hasTemplate && !hasCustom) {
       ctx.addIssue({

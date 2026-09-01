@@ -170,10 +170,71 @@ tests +257. `src/lib/supabase/types.ts` untouched.
 4. **Discount-code UI is a third mode on `ManualDiscountFields`** ("%" / "Monto fijo" / "Código", single-select) rather than a separate sibling component — keeps one XOR-safe control and adds no renamed labels.
 5. **No `discountCode` field added to `sellPackageSchema`'s `promotionId`/combo slot** — `promotionId` is a P4 concern; P3 only adds `discountCode`.
 
+## Slice P4a — Single-zone bonus promotion sell path — DONE
+
+Branch `promociones-pr-p4a` (off `promociones-pr-p3` @ `bdec805`). Strict TDD.
+All 6 P4a tasks complete. `pnpm lint` ✓, `pnpm typecheck` ✓,
+`pnpm test` → 71 files / **359 passed** (345 P3 baseline + 14 new),
+`pnpm e2e` → **5 passed** (27.5s; a first run hit 2 unrelated env-starvation
+timeouts in `gastos`/`tarifas` nav — clean re-run green).
+
+Authored production diff ≈ **250 changed lines** (well under the 400 cap);
+tests ≈ +230. `src/lib/supabase/types.ts` untouched.
+
+P4b (multi-zone combo + `create_combo_sale` wiring + `sale_packages`) is left
+for the next slice; the RPC already exists from P1 but stays unused.
+
+### Files changed
+
+| File | Action | What |
+|------|--------|------|
+| `src/features/promotions/data/promotions.ts` | Created | `listActiveBonusPromotions(supabase, businessDate)` — active `kind='bonus'` promotions whose `[valid_from,valid_to]` window contains the BA business date, joined to their single `promotion_items` row + tariff snapshot (`package_templates` + `body_zones`). Drops promos with ≠1 item or an archived tariff. Read-only; the window is the only enforcement point for a bonus sale. |
+| `src/features/promotions/domain/promotion-errors.ts` | Created | `PROMOTION_UNAVAILABLE_MESSAGE` Spanish string for a promo that vanished between form render and action re-resolve. |
+| `src/features/packages/domain/sell-package.ts` | Modified | `PackageSaleRequest` gains `source:"promotion"` (`promotionId`, `promotionName`, `tariff`, `bonusSessions`, `overridePrice`); `PackageSalePayload.promotionId?`; `buildPackageSalePayload` promotion branch — `totalSessions = bonusSessions(default, bonus)`, `price = bonusPrice(bono, override)`, description `Promo {name} — {d}+{b} sesiones ({zone})`, `promotionId` set; `withDiscount` threads `promotionId` so a code/manual discount still folds on top of the promo price. |
+| `src/features/packages/data/sell-package.ts` | Modified | `saleDiscountColumns` maps `promotionId` → `sales.promotion_id`. |
+| `src/features/packages/schema.ts` | Modified | `sellPackageSchema` gains `promotionId: optionalUuid`; superRefine — a promotion sale skips the template/custom requirement and is rejected when combined with a custom/template package ("No se puede combinar una promoción con un paquete a medida."). Code-XOR-manual (P3) still applies; a promo + code or promo + manual is allowed. |
+| `src/features/packages/actions/sell-package.ts` | Modified | parses `promotionId`; resolves the promo server-side via `listActiveBonusPromotions` against the BA business date (`formatInTimeZone(now, CLINIC_TZ)`); rejects a missing/out-of-window/archived promo with `PROMOTION_UNAVAILABLE_MESSAGE`; builds the `source:"promotion"` payload with the resolved discount. |
+| `src/features/packages/components/sell-package-form.tsx` | Modified | new `promotions` prop; "Promociones" `SelectGroup` in the existing "Paquete" select (values `promo:{id}`); picking one locks the tariff (hidden `templateId` cleared, hidden `promotionId` set) and shows "{d}+{b} sesiones · {price}". Existing labels + "Vender paquete" button unchanged (e2e-safe). |
+| `src/features/packages/components/package-sale-actions.tsx` | Modified | threads `promotions` to `SellPackageForm` (Vender paquete sheet only; Sesión suelta unchanged). |
+| `src/app/(dashboard)/clientes/[id]/page.tsx` | Modified | computes the BA business date, adds `listActiveBonusPromotions` to the `Promise.all`, passes `promotions` to `PackageSaleActions`. |
+| `src/features/sales/data/sales.ts` | Modified | `SaleDiscountInfo.promotionName` from the existing `promotions(name)` join — surfaces the promo even when `discount_amount = 0`. |
+| `src/app/(dashboard)/ventas/[id]/page.tsx` | Modified | Resumen shows a display-only "Promoción" cell when `promotionName` is set. |
+| `tests/unit/features/promotions/bonus.test.ts` | Created | `bonusSessions` / `bonusPrice` (4 cases — safety net, functions predate P4a). |
+| `tests/unit/features/packages/promotion-payload.test.ts` | Created | promotion-source payload — boosted `totalSessions`, `promotionId`, override price, discount-on-top (3 cases). |
+| `tests/unit/features/packages/schema.test.ts` | Modified | promotion accepted alone, rejected with custom, accepted with a code (+3 cases). |
+| `tests/integration/promotions/bonus-sell.test.ts` | Created | `listActiveBonusPromotions` lists in-window + excludes inactive/out-of-window/combo; 2-insert bonus sell → `promotion_id` + `total_sessions = 8`; discount code on top → `promotion_id` + `discount_code_id` + `used_count++` (4 cases). |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | RED | GREEN | REFACTOR |
+|------|-----------|-------|-----|-------|----------|
+| P4a.1 bonus math | `unit/features/promotions/bonus.test.ts` | Unit | ➖ (safety net — fns exist from P2) | ✅ 4 cases | ➖ |
+| P4a.2 promotion payload | `unit/features/packages/promotion-payload.test.ts` | Unit | ✅ "sesiones > 0" throw (no promotion branch) | ✅ 3 cases | ➖ |
+| P4a.3 bonus sell + list filter | `integration/promotions/bonus-sell.test.ts` | Integration | ✅ module `promotions/data/promotions` missing | ✅ 4 cases | ➖ |
+| P4a.4 schema | `unit/features/packages/schema.test.ts` | Unit | ✅ promo+custom accepted, promo-alone rejected | ✅ 3 cases | ➖ |
+| P4a.5–P4a.6 GREEN | — | — | — | ✅ lint/typecheck/test/e2e | ➖ |
+| full suite | `pnpm test` + `pnpm e2e` | all | 345 + 5 baseline | ✅ 359 + 5 | ➖ |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command / result | `pnpm vitest run tests/unit/features/promotions/bonus.test.ts tests/unit/features/packages/promotion-payload.test.ts tests/unit/features/packages/schema.test.ts tests/integration/promotions/bonus-sell.test.ts` → all pass |
+| Runtime harness / result | `pnpm test` → 359 passed (local Supabase); `pnpm e2e` → 5 passed (run serially — concurrent runs corrupt the shared local DB) |
+| Rollback boundary | Delete `src/features/promotions/data/promotions.ts`, `src/features/promotions/domain/promotion-errors.ts`, `tests/unit/features/promotions/bonus.test.ts`, `tests/unit/features/packages/promotion-payload.test.ts`, `tests/integration/promotions/bonus-sell.test.ts`; revert `sell-package.ts` (domain+data), `schema.ts`, `actions/sell-package.ts`, `sell-package-form.tsx`, `package-sale-actions.tsx`, `clientes/[id]/page.tsx`, `sales.ts`, `ventas/[id]/page.tsx`, `schema.test.ts`. `sales.promotion_id` stays null on every sale; the bonus picker disappears. |
+
+### Deviations from design
+
+1. **New `promotion-errors.ts`** (single Spanish constant) instead of extending `discount-errors.ts` — the prompt allowed either; kept the discount error mapper focused on trigger/constraint parsing.
+2. **`listActiveBonusPromotions` lives in `src/features/promotions/data/promotions.ts`** — P5 will extend this same file with the ABM CRUD (`list/get/create/update/archive/restore`), mirroring how P3's `discount-codes.ts` is shared with P6.
+3. **Promotion payload sets `templateId = tariff.id`** (not `null` like the custom path) so the `client_packages` row stays linked to its template — harmless and more correct.
+4. **Bonus picker is a `SelectGroup` inside the existing "Paquete" select** (values `promo:{id}`) rather than a separate control — keeps one mutually-exclusive selection and adds no renamed labels (e2e-safe).
+
 ## Remaining slices
 
 - [x] P2 sale-discounts — committed as `d430b12` (size:exception)
 - [x] P3 discount-codes checkout — committed on `promociones-pr-p3`
-- [ ] P4 / P4a+P4b combos sell
+- [x] P4a single-zone bonus sell — committed on `promociones-pr-p4a`
+- [ ] P4b multi-zone combo sell (`sellCombo` RPC wrapper + `sale_packages` + combo picker)
 - [ ] P5 promociones ABM
 - [ ] P6 codigos ABM

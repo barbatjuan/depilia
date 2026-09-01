@@ -80,6 +80,16 @@ export default async function SaleDetailPage({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {sale.discount.promotionName ? (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">
+                  Promoción
+                </p>
+                <p className="text-lg font-semibold">
+                  {sale.discount.promotionName}
+                </p>
+              </div>
+            ) : null}
             {sale.discount.discountAmount > 0 ? (
               <div>
                 <p className="text-xs text-muted-foreground uppercase">

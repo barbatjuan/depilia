@@ -46,6 +46,51 @@ describe("sellPackageSchema", () => {
     }
   });
 
+  it("accepts a promotion sale (promotionId set, no template/custom fields)", () => {
+    const result = sellPackageSchema.safeParse({
+      clientId: "11111111-1111-1111-1111-111111111111",
+      templateId: "",
+      zoneId: "",
+      sessionCount: "",
+      price: "",
+      promotionId: "44444444-4444-4444-4444-444444444444",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a promotion combined with an ad-hoc custom package", () => {
+    const result = sellPackageSchema.safeParse({
+      clientId: "11111111-1111-1111-1111-111111111111",
+      templateId: "",
+      zoneId: "33333333-3333-3333-3333-333333333333",
+      sessionCount: "6",
+      price: "60000",
+      promotionId: "44444444-4444-4444-4444-444444444444",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().formErrors).toContain(
+        "No se puede combinar una promoción con un paquete a medida.",
+      );
+    }
+  });
+
+  it("accepts a promotion sale with a discount code on top", () => {
+    const result = sellPackageSchema.safeParse({
+      clientId: "11111111-1111-1111-1111-111111111111",
+      templateId: "",
+      zoneId: "",
+      sessionCount: "",
+      price: "",
+      promotionId: "44444444-4444-4444-4444-444444444444",
+      discountCode: "VERANO",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rejects an ad-hoc sale with a zero session count", () => {
     const result = sellPackageSchema.safeParse({
       clientId: "11111111-1111-1111-1111-111111111111",

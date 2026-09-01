@@ -22,6 +22,7 @@ import type {
   PackageTemplateOption,
 } from "@/features/packages/domain/sell-package";
 import type { BodyZoneOption } from "@/features/packages/data/package-templates";
+import type { BonusPromotionOption } from "@/features/promotions/data/promotions";
 import {
   GENDER_LABEL,
   filterTariffs,
@@ -29,6 +30,7 @@ import {
 } from "@/features/packages/domain/tariff-picker";
 
 const CUSTOM_OPTION = "personalizado";
+const PROMO_PREFIX = "promo:";
 const GENDERS: Gender[] = ["mujer", "hombre"];
 const initialState: SellPackageFormState = { error: null };
 
@@ -36,6 +38,7 @@ export function SellPackageForm({
   action,
   templates,
   zones,
+  promotions = [],
   onSuccess,
 }: {
   action: (
@@ -44,6 +47,7 @@ export function SellPackageForm({
   ) => Promise<SellPackageFormState>;
   templates: PackageTemplateOption[];
   zones: BodyZoneOption[];
+  promotions?: BonusPromotionOption[];
   onSuccess?: () => void;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -53,6 +57,10 @@ export function SellPackageForm({
   const [zoneId, setZoneId] = useState<string>("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isCustom = selection === CUSTOM_OPTION;
+  const isPromotion = selection.startsWith(PROMO_PREFIX);
+  const promotionId = isPromotion ? selection.slice(PROMO_PREFIX.length) : "";
+  const selectedPromotion =
+    promotions.find((p) => p.id === promotionId) ?? null;
   const zoneName = zones.find((z) => z.id === zoneId)?.name ?? "";
 
   const genderTariffs = useMemo(
@@ -118,6 +126,17 @@ export function SellPackageForm({
                 ))}
               </SelectGroup>
             ))}
+            {promotions.length > 0 ? (
+              <SelectGroup>
+                <SelectLabel>Promociones</SelectLabel>
+                {promotions.map((p) => (
+                  <SelectItem key={p.id} value={`${PROMO_PREFIX}${p.id}`}>
+                    {p.name} — {p.tariff.name} ({p.tariff.defaultSessions}+
+                    {p.bonusSessions} sesiones)
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
             <SelectItem value={CUSTOM_OPTION}>
               Personalizado (zona + sesiones)
             </SelectItem>
@@ -126,12 +145,24 @@ export function SellPackageForm({
         <input
           type="hidden"
           name="templateId"
-          value={isCustom ? "" : selection}
+          value={isCustom || isPromotion ? "" : selection}
         />
+        <input type="hidden" name="promotionId" value={promotionId} />
         {selectedTariff ? (
           <p className="text-sm text-muted-foreground">
             {selectedTariff.defaultSessions} sesiones ·{" "}
             {formatMoney(selectedTariff.bonoPrice, moneyFormat)}
+          </p>
+        ) : null}
+        {selectedPromotion ? (
+          <p className="text-sm text-muted-foreground">
+            {selectedPromotion.tariff.defaultSessions}+
+            {selectedPromotion.bonusSessions} sesiones ·{" "}
+            {formatMoney(
+              selectedPromotion.overridePrice ??
+                selectedPromotion.tariff.bonoPrice,
+              moneyFormat,
+            )}
           </p>
         ) : null}
       </div>

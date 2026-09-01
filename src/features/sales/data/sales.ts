@@ -10,6 +10,8 @@ export type SaleDiscountInfo = {
   discountReason: string | null;
   /** Promotion name or discount-code label when the discount came from one. */
   discountSource: string | null;
+  /** Promotion name when the sale was sold through a promotion (`promotion_id`), regardless of any discount. */
+  promotionName: string | null;
 };
 
 export type SaleListRow = {
@@ -40,6 +42,7 @@ function toDiscountInfo(row: RawDiscountShape): SaleDiscountInfo {
     discountSource:
       row.promotions?.name ??
       (row.discount_codes?.code ? `Código ${row.discount_codes.code}` : null),
+    promotionName: row.promotions?.name ?? null,
   };
 }
 

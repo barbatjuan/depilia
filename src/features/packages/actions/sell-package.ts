@@ -1,13 +1,17 @@
 "use server";
 
+import { formatInTimeZone } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseClient } from "@/lib/supabase/server";
 import { sellPackageSchema } from "@/features/packages/schema";
 import { buildPackageSalePayload } from "@/features/packages/domain/sell-package";
 import { listActivePackageTemplates } from "@/features/packages/data/package-templates";
+import { listActiveBonusPromotions } from "@/features/promotions/data/promotions";
 import { sellPackage } from "@/features/packages/data/sell-package";
 import { resolveDiscountInput } from "@/features/packages/data/sale-discount";
 import { mapDiscountError } from "@/features/promotions/domain/discount-errors";
+import { PROMOTION_UNAVAILABLE_MESSAGE } from "@/features/promotions/domain/promotion-errors";
+import { CLINIC_TZ } from "@/features/dashboard/domain/schedule";
 
 export type SellPackageFormState = { error: string | null };
 
@@ -29,6 +33,7 @@ export async function sellPackageAction(
     zoneId: formData.get("zoneId"),
     sessionCount: formData.get("sessionCount"),
     price: formData.get("price"),
+    promotionId: formData.get("promotionId"),
     discountKind: formData.get("discountKind"),
     discountValue: formData.get("discountValue"),
     discountReason: formData.get("discountReason"),
@@ -60,7 +65,31 @@ export async function sellPackageAction(
 
   let payload;
   try {
-    if (parsed.data.templateId) {
+    if (parsed.data.promotionId) {
+      const businessDate = formatInTimeZone(
+        new Date(),
+        CLINIC_TZ,
+        "yyyy-MM-dd",
+      );
+      const promotions = await listActiveBonusPromotions(supabase, businessDate);
+      const promotion = promotions.find(
+        (p) => p.id === parsed.data.promotionId,
+      );
+      if (!promotion) {
+        return { error: PROMOTION_UNAVAILABLE_MESSAGE };
+      }
+      payload = buildPackageSalePayload(
+        {
+          source: "promotion",
+          promotionId: promotion.id,
+          promotionName: promotion.name,
+          tariff: promotion.tariff,
+          bonusSessions: promotion.bonusSessions,
+          overridePrice: promotion.overridePrice,
+        },
+        discount,
+      );
+    } else if (parsed.data.templateId) {
       const templates = await listActivePackageTemplates(supabase);
       const template = templates.find((t) => t.id === parsed.data.templateId);
       if (!template) {

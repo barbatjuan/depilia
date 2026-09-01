@@ -86,12 +86,12 @@ Accepted design calls (do not re-litigate): combo sell path uses a dedicated `cr
 > P4a/P4b split trigger: at apply time, if P4 forecasts > 400 authored lines, ship P4a then P4b (bases: P4a→P3, P4b→P4a, P5→P4b).
 
 ### P4a — single-zone bonus
-- [ ] P4a.1 RED unit: `bonusSessions(6,2) === 8`; `bonusPrice` = `override_price ?? bono_price`; no per-session price change — `tests/unit/features/promotions/bonus.test.ts`
-- [ ] P4a.2 RED unit: `PackageSaleRequest.source = "promotion"` payload sets `promotion_id`, `total_sessions`, `total` — `tests/unit/features/packages/promotion-payload.test.ts`
-- [ ] P4a.3 RED integ: bonus sell (2-insert path) → `sales` row with `promotion_id`, `client_package.total_sessions = default + bonus` — `tests/integration/promotions/bonus-sell.test.ts`
-- [ ] P4a.4 GREEN bonus math + `source:"promotion"` payload in `sell-package.ts`
-- [ ] P4a.5 GREEN bonus picker in `sell-package-form.tsx` (Vender paquete only; none on Sesión suelta)
-- [ ] P4a.6 GREEN bonus action wiring; run `pnpm test`
+- [x] P4a.1 RED unit: `bonusSessions(6,2) === 8`; `bonusPrice` = `override_price ?? bono_price`; no per-session price change — `tests/unit/features/promotions/bonus.test.ts`
+- [x] P4a.2 RED unit: `PackageSaleRequest.source = "promotion"` payload sets `promotion_id`, `total_sessions`, `total` — `tests/unit/features/packages/promotion-payload.test.ts`
+- [x] P4a.3 RED integ: bonus sell (2-insert path) → `sales` row with `promotion_id`, `client_package.total_sessions = default + bonus` — `tests/integration/promotions/bonus-sell.test.ts`
+- [x] P4a.4 GREEN bonus math + `source:"promotion"` payload in `sell-package.ts`
+- [x] P4a.5 GREEN bonus picker in `sell-package-form.tsx` (Vender paquete only; none on Sesión suelta)
+- [x] P4a.6 GREEN bonus action wiring; run `pnpm test`
 
 ### P4b — multi-zone combo
 - [ ] P4b.1 RED unit: combo `list_total` = `sum(item.override_price ?? tariff.bono_price)` computed in the action — `tests/unit/features/packages/combo-payload.test.ts`

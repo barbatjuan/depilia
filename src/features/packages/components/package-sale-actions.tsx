@@ -17,6 +17,7 @@ import { sellPackageAction } from "@/features/packages/actions/sell-package";
 import { sellLooseSessionAction } from "@/features/packages/actions/sell-loose-session";
 import type { PackageTemplateOption } from "@/features/packages/domain/sell-package";
 import type { BodyZoneOption } from "@/features/packages/data/package-templates";
+import type { BonusPromotionOption } from "@/features/promotions/data/promotions";
 
 /**
  * Ficha sales entry point (spec: "package-sessions / Sell a package" and
@@ -28,10 +29,12 @@ export function PackageSaleActions({
   clientId,
   templates,
   zones,
+  promotions = [],
 }: {
   clientId: string;
   templates: PackageTemplateOption[];
   zones: BodyZoneOption[];
+  promotions?: BonusPromotionOption[];
 }) {
   const [packageOpen, setPackageOpen] = useState(false);
   const [looseOpen, setLooseOpen] = useState(false);
@@ -59,6 +62,7 @@ export function PackageSaleActions({
               action={boundSellPackage}
               templates={templates}
               zones={zones}
+              promotions={promotions}
               onSuccess={() => setPackageOpen(false)}
             />
           </div>

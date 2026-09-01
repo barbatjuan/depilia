@@ -15,6 +15,9 @@ import {
   listActivePackageTemplates,
 } from "@/features/packages/data/package-templates";
 import { PackageSaleActions } from "@/features/packages/components/package-sale-actions";
+import { listActiveBonusPromotions } from "@/features/promotions/data/promotions";
+import { CLINIC_TZ } from "@/features/dashboard/domain/schedule";
+import { formatInTimeZone } from "date-fns-tz";
 import { listSales } from "@/features/sales/data/sales";
 import { SaleStatusBadge } from "@/features/sales/components/sale-status-badge";
 import { Button } from "@/components/ui/button";
@@ -60,15 +63,24 @@ export default async function ClienteFichaPage({
   const client = await getClient(supabase, id);
   if (!client) notFound();
 
-  const [packages, appointments, packageTemplates, zones, sales, moneyFormat] =
-    await Promise.all([
-      getClientPackages(supabase, id),
-      getClientAppointments(supabase, id),
-      listActivePackageTemplates(supabase),
-      listActiveBodyZones(supabase),
-      listSales(supabase, { clientId: id }),
-      getMoneyFormat(supabase),
-    ]);
+  const businessDate = formatInTimeZone(new Date(), CLINIC_TZ, "yyyy-MM-dd");
+  const [
+    packages,
+    appointments,
+    packageTemplates,
+    zones,
+    promotions,
+    sales,
+    moneyFormat,
+  ] = await Promise.all([
+    getClientPackages(supabase, id),
+    getClientAppointments(supabase, id),
+    listActivePackageTemplates(supabase),
+    listActiveBodyZones(supabase),
+    listActiveBonusPromotions(supabase, businessDate),
+    listSales(supabase, { clientId: id }),
+    getMoneyFormat(supabase),
+  ]);
   const packageSummaries = summarizeClientPackages(packages);
   const activePackages = packageSummaries.filter((p) => p.status === "active");
   const pastPackages = packageSummaries.filter((p) => p.status === "completed");
@@ -99,6 +111,7 @@ export default async function ClienteFichaPage({
             clientId={id}
             templates={packageTemplates}
             zones={zones}
+            promotions={promotions}
           />
           <Button variant="outline" asChild>
             <Link href={`/clientes/${id}/editar`}>

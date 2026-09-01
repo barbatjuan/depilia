@@ -24,6 +24,7 @@ function saleDiscountColumns(payload: {
   discountReason?: string | null;
   discountedBy?: string | null;
   discountCodeId?: string | null;
+  promotionId?: string | null;
 }) {
   return {
     total: payload.total ?? payload.price,
@@ -32,6 +33,7 @@ function saleDiscountColumns(payload: {
     discount_reason: payload.discountReason ?? null,
     discounted_by: payload.discountedBy ?? null,
     discount_code_id: payload.discountCodeId ?? null,
+    promotion_id: payload.promotionId ?? null,
   };
 }
 

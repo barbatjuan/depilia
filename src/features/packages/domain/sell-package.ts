@@ -1,5 +1,7 @@
 import {
   applyDiscount,
+  bonusPrice,
+  bonusSessions,
   type DiscountKind,
 } from "@/features/promotions/domain/discount";
 
@@ -102,6 +104,14 @@ export type PackageSaleRequest =
       zoneName: string;
       sessionCount: number;
       price: number;
+    }
+  | {
+      source: "promotion";
+      promotionId: string;
+      promotionName: string;
+      tariff: PackageTemplateOption;
+      bonusSessions: number;
+      overridePrice: number | null;
     };
 
 export type PackageSalePayload = {
@@ -116,6 +126,7 @@ export type PackageSalePayload = {
   discountReason?: string | null;
   discountedBy?: string | null;
   discountCodeId?: string | null;
+  promotionId?: string | null;
 };
 
 /**
@@ -138,6 +149,25 @@ export function buildPackageSalePayload(
         totalSessions: template.defaultSessions,
         price: template.bonoPrice,
         description: `Paquete ${template.name} — ${template.defaultSessions} sesiones (${template.zoneName})`,
+      },
+      discount,
+    );
+  }
+
+  if (request.source === "promotion") {
+    const { tariff } = request;
+    const totalSessions = bonusSessions(
+      tariff.defaultSessions,
+      request.bonusSessions,
+    );
+    return withDiscount(
+      {
+        templateId: tariff.id,
+        zoneId: tariff.zoneId,
+        totalSessions,
+        price: bonusPrice(tariff.bonoPrice, request.overridePrice),
+        description: `Promo ${request.promotionName} — ${tariff.defaultSessions}+${request.bonusSessions} sesiones (${tariff.zoneName})`,
+        promotionId: request.promotionId,
       },
       discount,
     );
@@ -177,6 +207,7 @@ function withDiscount(
     discountReason: d.discountReason,
     discountedBy: d.discountedBy,
     discountCodeId: d.discountCodeId,
+    promotionId: base.promotionId ?? null,
   };
 }
 
