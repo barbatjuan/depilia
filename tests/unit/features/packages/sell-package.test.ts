@@ -18,7 +18,7 @@ describe("buildPackageSalePayload", () => {
       },
     });
 
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       templateId: "tpl-1",
       zoneId: "zone-1",
       totalSessions: 6,
@@ -36,7 +36,7 @@ describe("buildPackageSalePayload", () => {
       price: 90000,
     });
 
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       templateId: null,
       zoneId: "zone-2",
       totalSessions: 8,

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useMoneyFormat } from "@/components/money-format-provider";
 import { formatMoney } from "@/lib/money";
+import { ManualDiscountFields } from "@/features/packages/components/manual-discount-fields";
 import type { SellLooseSessionFormState } from "@/features/packages/actions/sell-loose-session";
 import type {
   Gender,
@@ -142,6 +143,8 @@ export function SellLooseSessionForm({
           </p>
         ) : null}
       </div>
+
+      <ManualDiscountFields />
 
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">

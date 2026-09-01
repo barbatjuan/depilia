@@ -29,7 +29,20 @@ export const saleColumns: ColumnDef<SaleListRow>[] = [
   {
     id: "total",
     header: "Total",
-    cell: ({ row }) => <MoneyCell amount={row.original.balance.total} />,
+    cell: ({ row }) => {
+      const { discount, balance } = row.original;
+      if (discount.discountAmount > 0) {
+        return (
+          <span className="flex flex-col leading-tight">
+            <span className="text-xs text-muted-foreground line-through">
+              <MoneyCell amount={discount.listTotal} />
+            </span>
+            <MoneyCell amount={balance.total} />
+          </span>
+        );
+      }
+      return <MoneyCell amount={balance.total} />;
+    },
   },
   {
     id: "paid",

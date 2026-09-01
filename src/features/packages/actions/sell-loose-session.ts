@@ -6,6 +6,8 @@ import { sellLooseSessionSchema } from "@/features/packages/schema";
 import { buildLooseSessionPayload } from "@/features/packages/domain/sell-package";
 import { listActivePackageTemplates } from "@/features/packages/data/package-templates";
 import { sellLooseSession } from "@/features/packages/data/sell-package";
+import { resolveDiscountInput } from "@/features/packages/data/sale-discount";
+import { mapDiscountError } from "@/features/promotions/domain/discount-errors";
 
 export type SellLooseSessionFormState = { error: string | null };
 
@@ -25,6 +27,9 @@ export async function sellLooseSessionAction(
     clientId,
     templateId: formData.get("templateId"),
     amount: formData.get("amount"),
+    discountKind: formData.get("discountKind"),
+    discountValue: formData.get("discountValue"),
+    discountReason: formData.get("discountReason"),
   });
 
   if (!parsed.success) {
@@ -38,6 +43,8 @@ export async function sellLooseSessionAction(
 
   const supabase = await createSupabaseClient();
 
+  const discount = await resolveDiscountInput(supabase, parsed.data);
+
   try {
     const templates = await listActivePackageTemplates(supabase);
     const template = templates.find((t) => t.id === parsed.data.templateId);
@@ -45,17 +52,28 @@ export async function sellLooseSessionAction(
       return { error: "La tarifa seleccionada ya no está disponible." };
     }
 
-    const payload = buildLooseSessionPayload({
-      templateId: template.id,
-      templateName: template.name,
-      zoneName: template.zoneName,
-      sessionPrice: template.sessionPrice,
-      amount: parsed.data.amount,
-    });
+    const payload = buildLooseSessionPayload(
+      {
+        templateId: template.id,
+        templateName: template.name,
+        zoneName: template.zoneName,
+        sessionPrice: template.sessionPrice,
+        amount: parsed.data.amount,
+      },
+      discount,
+    );
 
     await sellLooseSession(supabase, { clientId, payload });
-  } catch {
-    return { error: "No se pudo registrar la sesión suelta." };
+  } catch (error) {
+    if (error instanceof Error && !("code" in error)) {
+      return { error: error.message };
+    }
+    return {
+      error:
+        discount && (error as { code?: string })?.code === "23514"
+          ? mapDiscountError(error as { code?: string | null })
+          : "No se pudo registrar la sesión suelta.",
+    };
   }
 
   revalidatePath(`/clientes/${clientId}`);

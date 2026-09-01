@@ -11,7 +11,7 @@ const base = {
 describe("buildLooseSessionPayload", () => {
   it("prefills the sale total from the tariff's session_price when the amount is not overridden", () => {
     const payload = buildLooseSessionPayload({ ...base, amount: null });
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       templateId: "tpl-1",
       description: "Sesión suelta — Axilas",
       price: 10,
@@ -20,7 +20,7 @@ describe("buildLooseSessionPayload", () => {
 
   it("uses the operator-overridden amount instead of the prefilled session_price", () => {
     const payload = buildLooseSessionPayload({ ...base, amount: 8 });
-    expect(payload).toEqual({
+    expect(payload).toMatchObject({
       templateId: "tpl-1",
       description: "Sesión suelta — Axilas",
       price: 8,

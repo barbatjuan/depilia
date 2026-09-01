@@ -6,6 +6,8 @@ import { sellPackageSchema } from "@/features/packages/schema";
 import { buildPackageSalePayload } from "@/features/packages/domain/sell-package";
 import { listActivePackageTemplates } from "@/features/packages/data/package-templates";
 import { sellPackage } from "@/features/packages/data/sell-package";
+import { resolveDiscountInput } from "@/features/packages/data/sale-discount";
+import { mapDiscountError } from "@/features/promotions/domain/discount-errors";
 
 export type SellPackageFormState = { error: string | null };
 
@@ -27,6 +29,9 @@ export async function sellPackageAction(
     zoneId: formData.get("zoneId"),
     sessionCount: formData.get("sessionCount"),
     price: formData.get("price"),
+    discountKind: formData.get("discountKind"),
+    discountValue: formData.get("discountValue"),
+    discountReason: formData.get("discountReason"),
   });
 
   if (!parsed.success) {
@@ -40,31 +45,53 @@ export async function sellPackageAction(
 
   const supabase = await createSupabaseClient();
 
+  const discount = await resolveDiscountInput(supabase, parsed.data);
+
+  let payload;
   try {
-    let payload;
     if (parsed.data.templateId) {
       const templates = await listActivePackageTemplates(supabase);
       const template = templates.find((t) => t.id === parsed.data.templateId);
       if (!template) {
         return { error: "El paquete seleccionado ya no está disponible." };
       }
-      payload = buildPackageSalePayload({ source: "template", template });
+      payload = buildPackageSalePayload({ source: "template", template }, discount);
     } else {
       const zoneId = parsed.data.zoneId as string;
       const zoneName =
         formData.get("zoneName")?.toString() || "Zona seleccionada";
-      payload = buildPackageSalePayload({
-        source: "custom",
-        zoneId,
-        zoneName,
-        sessionCount: Number(parsed.data.sessionCount),
-        price: Number(parsed.data.price),
-      });
+      payload = buildPackageSalePayload(
+        {
+          source: "custom",
+          zoneId,
+          zoneName,
+          sessionCount: Number(parsed.data.sessionCount),
+          price: Number(parsed.data.price),
+        },
+        discount,
+      );
     }
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar la venta del paquete.",
+    };
+  }
 
+  try {
     await sellPackage(supabase, { clientId, payload });
-  } catch {
-    return { error: "No se pudo registrar la venta del paquete." };
+  } catch (error) {
+    const mapped = mapDiscountError(
+      error as { code?: string | null; message?: string | null },
+    );
+    return {
+      error:
+        discount && (error as { code?: string })?.code === "23514"
+          ? mapped
+          : "No se pudo registrar la venta del paquete.",
+    };
   }
 
   revalidatePath(`/clientes/${clientId}`);

@@ -10,6 +10,30 @@ export type PackageSaleResult = {
 };
 
 /**
+ * Maps the pure payload's discount fields onto the `sales` columns added in
+ * migration `0015`. When no discount was applied the builder leaves the
+ * fields undefined, so `list_total` falls back to the price (the
+ * `sales_set_list_total_default` trigger would do the same) and
+ * `discount_amount` stays 0 — `sale_balances` / caja / KPI are untouched.
+ */
+function saleDiscountColumns(payload: {
+  price: number;
+  listTotal?: number;
+  total?: number;
+  discountAmount?: number;
+  discountReason?: string | null;
+  discountedBy?: string | null;
+}) {
+  return {
+    total: payload.total ?? payload.price,
+    list_total: payload.listTotal ?? payload.price,
+    discount_amount: payload.discountAmount ?? 0,
+    discount_reason: payload.discountReason ?? null,
+    discounted_by: payload.discountedBy ?? null,
+  };
+}
+
+/**
  * Persists a package sale (spec: "package-sessions / Sell a package"): a
  * `client_packages` row for exactly one zone with `sessions_used = 0`, no
  * expiry, followed by the matching `sales` row so the sale shows up in
@@ -41,7 +65,7 @@ export async function sellPackage(
       client_id: params.clientId,
       client_package_id: pkg.id,
       description: params.payload.description,
-      total: params.payload.price,
+      ...saleDiscountColumns(params.payload),
     })
     .select("id")
     .single();
@@ -68,7 +92,7 @@ export async function sellLooseSession(
     .insert({
       client_id: params.clientId,
       description: params.payload.description,
-      total: params.payload.price,
+      ...saleDiscountColumns(params.payload),
     })
     .select("id")
     .single();

@@ -4,6 +4,14 @@ import {
   type SaleBalance,
 } from "@/features/sales/domain/sale-balance";
 
+export type SaleDiscountInfo = {
+  listTotal: number;
+  discountAmount: number;
+  discountReason: string | null;
+  /** Promotion name or discount-code label when the discount came from one. */
+  discountSource: string | null;
+};
+
 export type SaleListRow = {
   id: string;
   clientId: string;
@@ -12,7 +20,28 @@ export type SaleListRow = {
   soldAt: string;
   status: string;
   balance: SaleBalance;
+  discount: SaleDiscountInfo;
 };
+
+type RawDiscountShape = {
+  total: number;
+  list_total: number | null;
+  discount_amount: number | null;
+  discount_reason: string | null;
+  promotions?: { name: string } | null;
+  discount_codes?: { code: string } | null;
+};
+
+function toDiscountInfo(row: RawDiscountShape): SaleDiscountInfo {
+  return {
+    listTotal: row.list_total ?? row.total,
+    discountAmount: row.discount_amount ?? 0,
+    discountReason: row.discount_reason ?? null,
+    discountSource:
+      row.promotions?.name ??
+      (row.discount_codes?.code ? `Código ${row.discount_codes.code}` : null),
+  };
+}
 
 /**
  * Lists every sale (package sales and loose-session sales alike — both live
@@ -28,7 +57,7 @@ export async function listSales(
   let query = supabase
     .from("sales")
     .select(
-      "id, client_id, description, total, sold_at, status, clients(first_name, last_name), payments(amount)",
+      "id, client_id, description, total, list_total, discount_amount, discount_reason, sold_at, status, clients(first_name, last_name), promotions(name), discount_codes(code), payments(amount)",
     )
     .order("sold_at", { ascending: false });
 
@@ -49,6 +78,7 @@ export async function listSales(
     soldAt: row.sold_at,
     status: row.status,
     balance: deriveSaleBalance(row.total, row.payments ?? []),
+    discount: toDiscountInfo(row as unknown as RawDiscountShape),
   }));
 }
 
@@ -68,6 +98,7 @@ export type SaleDetail = {
   soldAt: string;
   status: string;
   balance: SaleBalance;
+  discount: SaleDiscountInfo;
   payments: SalePaymentRow[];
 };
 
@@ -83,7 +114,7 @@ export async function getSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, client_id, description, total, sold_at, status, clients(first_name, last_name), payments(id, amount, paid_at, method, note)",
+      "id, client_id, description, total, list_total, discount_amount, discount_reason, sold_at, status, clients(first_name, last_name), promotions(name), discount_codes(code), payments(id, amount, paid_at, method, note)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -111,6 +142,7 @@ export async function getSale(
     soldAt: data.sold_at,
     status: data.status,
     balance: deriveSaleBalance(data.total, data.payments ?? []),
+    discount: toDiscountInfo(data as unknown as RawDiscountShape),
     payments,
   };
 }

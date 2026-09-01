@@ -80,12 +80,39 @@ export default async function SaleDetailPage({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {sale.discount.discountAmount > 0 ? (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">
+                  Precio de lista
+                </p>
+                <p className="text-lg font-semibold line-through text-muted-foreground">
+                  {currencyFormat(sale.discount.listTotal)}
+                </p>
+              </div>
+            ) : null}
             <div>
               <p className="text-xs text-muted-foreground uppercase">Total</p>
               <p className="text-lg font-semibold">
                 {currencyFormat(sale.balance.total)}
               </p>
             </div>
+            {sale.discount.discountAmount > 0 ? (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">
+                  Descuento
+                </p>
+                <p className="text-lg font-semibold">
+                  −{currencyFormat(sale.discount.discountAmount)}
+                </p>
+                {sale.discount.discountReason || sale.discount.discountSource ? (
+                  <p className="text-sm text-muted-foreground">
+                    {[sale.discount.discountSource, sale.discount.discountReason]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div>
               <p className="text-xs text-muted-foreground uppercase">
                 Pagado

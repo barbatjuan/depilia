@@ -55,19 +55,19 @@ Accepted design calls (do not re-litigate): combo sell path uses a dedicated `cr
 
 ## Phase P2: Pure discount math + per-sale manual discount (spec sale-discounts)
 
-- [ ] P2.1 RED unit: `applyDiscount({listTotal,kind,value,fractionDigits})` — percent = `round(listTotal*value/100, digits)`, fixed verbatim, clamp negative → 0, returns `{ok:false,reason:"exceeds"}` when `discountAmount > listTotal - 0.01` — `tests/unit/features/promotions/discount.test.ts`
-- [ ] P2.2 RED unit: `currencyFractionDigits(currency)`, `bonusSessions(def,bonus)`, `bonusPrice(bonoPrice, overridePrice|null)` — same file
-- [ ] P2.3 RED unit: `buildPackageSalePayload` + loose-session payload carry `list_total`/`discount_amount`/`discount_reason`/`discounted_by`; no discount → `list_total = total`, amount 0, reason/by null — `tests/unit/features/packages/build-package-sale-payload.test.ts`
-- [ ] P2.4 RED unit: `packages/schema.ts` superRefine — code XOR manual → "No se pueden combinar un código y un descuento manual."; manual `discount_amount > 0` ⇒ `discount_reason` required — `tests/unit/features/packages/schema.test.ts`
-- [ ] P2.5 RED integ: `sellPackage` + `sellLooseSession` persist discount fields; DB CHECK enforced end-to-end; `discounted_by` = acting staff — `tests/integration/promotions/sale-discount.test.ts`
-- [ ] P2.6 GREEN `src/features/promotions/domain/discount.ts` (pure, per contract)
-- [ ] P2.7 GREEN payload builders — `src/features/sales/domain/sell-package.ts` + loose-session request
-- [ ] P2.8 GREEN data fns — `sales` insert includes new columns
-- [ ] P2.9 GREEN `src/features/packages/schema.ts` superRefine additions (`discountKind`, `discountValue`, `discountReason`, `promotionId`)
-- [ ] P2.10 GREEN manual discount input block in `sell-package-form.tsx` + `sell-loose-session-form.tsx`
-- [ ] P2.11 GREEN `package-sale-actions.tsx` + loose action wire `discounted_by`
-- [ ] P2.12 GREEN display-only: `sales.ts` SELECT += `list_total, discount_amount, discount_reason, promotions(name), discount_codes(code)`; `sales/components/columns.tsx` struck `list_total` + `total` when `discount_amount > 0`; `ventas/[id]` Resumen adds "Precio de lista" (struck) + "Descuento" + promo/code label; `deriveSaleBalance` unchanged
-- [ ] P2.13 GREEN run `pnpm test` + golden path; confirm caja/KPI/balance assertions unchanged
+- [x] P2.1 RED unit: `applyDiscount({listTotal,kind,value,fractionDigits})` — percent = `round(listTotal*value/100, digits)`, fixed verbatim, clamp negative → 0, returns `{ok:false,reason:"exceeds"}` when `discountAmount > listTotal - 0.01` — `tests/unit/features/promotions/discount.test.ts`
+- [x] P2.2 RED unit: `currencyFractionDigits(currency)`, `bonusSessions(def,bonus)`, `bonusPrice(bonoPrice, overridePrice|null)` — same file
+- [x] P2.3 RED unit: `buildPackageSalePayload` + loose-session payload carry `list_total`/`discount_amount`/`discount_reason`/`discounted_by`; no discount → `list_total = total`, amount 0, reason/by null — `tests/unit/features/packages/build-package-sale-payload.test.ts`
+- [x] P2.4 RED unit: `packages/schema.ts` superRefine — code XOR manual → "No se pueden combinar un código y un descuento manual."; manual `discount_amount > 0` ⇒ `discount_reason` required — `tests/unit/features/packages/schema.test.ts`
+- [x] P2.5 RED integ: `sellPackage` + `sellLooseSession` persist discount fields; DB CHECK enforced end-to-end; `discounted_by` = acting staff — `tests/integration/promotions/sale-discount.test.ts`
+- [x] P2.6 GREEN `src/features/promotions/domain/discount.ts` (pure, per contract)
+- [x] P2.7 GREEN payload builders — `src/features/sales/domain/sell-package.ts` + loose-session request
+- [x] P2.8 GREEN data fns — `sales` insert includes new columns
+- [x] P2.9 GREEN `src/features/packages/schema.ts` superRefine additions (`discountKind`, `discountValue`, `discountReason`, `promotionId`)
+- [x] P2.10 GREEN manual discount input block in `sell-package-form.tsx` + `sell-loose-session-form.tsx`
+- [x] P2.11 GREEN `package-sale-actions.tsx` + loose action wire `discounted_by`
+- [x] P2.12 GREEN display-only: `sales.ts` SELECT += `list_total, discount_amount, discount_reason, promotions(name), discount_codes(code)`; `sales/components/columns.tsx` struck `list_total` + `total` when `discount_amount > 0`; `ventas/[id]` Resumen adds "Precio de lista" (struck) + "Descuento" + promo/code label; `deriveSaleBalance` unchanged
+- [x] P2.13 GREEN run `pnpm test` + golden path; confirm caja/KPI/balance assertions unchanged
 
 ## Phase P3: Discount codes at checkout (spec discount-codes)
 

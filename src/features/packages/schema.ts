@@ -19,6 +19,76 @@ const optionalNumeric = z
   .nullish()
   .transform((value) => value ?? "");
 
+const optionalDiscountKind = z
+  .union([z.literal(""), z.enum(["percent", "fixed"])])
+  .nullish()
+  .transform((value) => value ?? "");
+const optionalText = z
+  .string()
+  .nullish()
+  .transform((value) => (value ?? "").trim());
+
+/**
+ * Optional per-sale manual discount fields, shared by the "vender paquete"
+ * and "sesión suelta" schemas (spec: "sale-discounts / Manual discount at
+ * both flows"). A discount is "applied" when `discountValue` is a positive
+ * number; when it is, a `discountReason` is required and the value must be a
+ * valid percent (0 < v <= 100) or a positive fixed amount.
+ *
+ * NOTE (P3): the discount-code input lands here as a `discountCode` field and
+ * becomes mutually exclusive with these manual fields — the XOR guard is
+ * wired in P3, this slice only ships the manual path.
+ */
+export const discountFields = {
+  discountKind: optionalDiscountKind,
+  discountValue: optionalNumeric,
+  discountReason: optionalText,
+};
+
+type DiscountShape = {
+  discountKind: "" | "percent" | "fixed";
+  discountValue: "" | number;
+  discountReason: string;
+};
+
+export function refineManualDiscount(
+  data: DiscountShape,
+  ctx: z.RefinementCtx,
+): void {
+  const value = typeof data.discountValue === "number" ? data.discountValue : 0;
+  const applying = data.discountKind !== "" || value > 0;
+  if (!applying) return;
+
+  if (data.discountKind !== "percent" && data.discountKind !== "fixed") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["discountKind"],
+      message: "Elegí el tipo de descuento.",
+    });
+  }
+  if (data.discountReason === "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["discountReason"],
+      message: "Ingresá el motivo del descuento.",
+    });
+  }
+  if (data.discountKind === "percent" && (value <= 0 || value > 100)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["discountValue"],
+      message: "El porcentaje debe estar entre 0 y 100.",
+    });
+  }
+  if (data.discountKind === "fixed" && value <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["discountValue"],
+      message: "El descuento debe ser mayor a 0.",
+    });
+  }
+}
+
 /**
  * "Sell a package" form/action schema (spec: "package-sessions / Sell a
  * package"). The admin either picks a catalog `package_template` OR fills
@@ -33,8 +103,10 @@ export const sellPackageSchema = z
     zoneId: optionalUuid,
     sessionCount: optionalNumeric,
     price: optionalNumeric,
+    ...discountFields,
   })
   .superRefine((data, ctx) => {
+    refineManualDiscount(data, ctx);
     const hasTemplate = data.templateId !== "";
     const hasCustom =
       data.zoneId !== "" && data.sessionCount !== "" && data.price !== "";
@@ -78,12 +150,15 @@ export type SellPackageInput = z.infer<typeof sellPackageSchema>;
  * amount field stays editable, and a blank value falls back server-side to
  * the tariff's `session_price`.
  */
-export const sellLooseSessionSchema = z.object({
-  clientId: uuid,
-  templateId: uuid,
-  amount: optionalNumeric.transform((value) =>
-    value === "" ? null : (value as number),
-  ),
-});
+export const sellLooseSessionSchema = z
+  .object({
+    clientId: uuid,
+    templateId: uuid,
+    amount: optionalNumeric.transform((value) =>
+      value === "" ? null : (value as number),
+    ),
+    ...discountFields,
+  })
+  .superRefine(refineManualDiscount);
 
 export type SellLooseSessionInput = z.infer<typeof sellLooseSessionSchema>;
