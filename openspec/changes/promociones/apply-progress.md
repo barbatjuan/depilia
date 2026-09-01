@@ -117,10 +117,63 @@ untouched (no regen needed).
 3. `discounted_by` resolved in the data/action layer via `rpc("current_staff_id")` rather than a column `DEFAULT` — a default would stamp every non-discounted sale too, violating the spec's "no discount ⇒ by null".
 4. Payload discount fields are optional on `PackageSalePayload` / `LooseSessionPayload` so hand-built payloads in existing tests still typecheck; the builders always populate them.
 
+## Slice P3 — Discount codes at checkout — DONE
+
+Branch `promociones-pr-p3` (off `promociones-pr-p2` @ `d430b12`). Strict TDD.
+All 9 P3 tasks complete. `pnpm lint` ✓, `pnpm typecheck` ✓,
+`pnpm test` → 68 files / **345 passed** (327 P2 baseline + 18 new),
+`pnpm e2e` → **5 passed** (run serially — concurrent runs corrupt the shared local DB).
+
+Authored production diff ≈ **256 changed lines** (well under the 400 cap);
+tests +257. `src/lib/supabase/types.ts` untouched.
+
+### Files changed
+
+| File | Action | What |
+|------|--------|------|
+| `src/features/discount-codes/data/discount-codes.ts` | Created | `validateDiscountCode(supabase, code, businessDate)` — case-insensitive (`citext`) lookup, re-checks `active` / BA-date window / `used_count < max_uses`; returns `{ok:true,row:{id,kind,value}}` or `{ok:false,reason:"unknown"|"inactive"|"out_of_window"|"exhausted"}`. Advisory only; the `sales_apply_discount_code` trigger is the real atomic guard. |
+| `src/features/promotions/domain/discount-errors.ts` | Modified | `mapDiscountError` now matches the trigger RAISE message prefixes (`discount_code_inactive` / `_out_of_window` / `_exhausted`, all raised with `errcode = check_violation` → SQLSTATE `23514`) → Spanish; new `discountCodeReasonMessage(reason)` + `DiscountCodeReason` type for the pre-check reasons. |
+| `src/features/packages/schema.ts` | Modified | `discountFields` gains `discountCode: optionalText`; `refineManualDiscount` rejects a payload carrying BOTH a code and a manual discount → "No se pueden combinar un código y un descuento manual." |
+| `src/features/packages/domain/sell-package.ts` | Modified | `SaleDiscountInput.codeId?`, `SaleDiscountFields.discountCodeId`, both payload types + `resolveSaleDiscount` / builders thread `discountCodeId`. |
+| `src/features/packages/data/sell-package.ts` | Modified | `saleDiscountColumns` maps `discountCodeId` → `discount_code_id` so the trigger fires and bumps `used_count`. |
+| `src/features/packages/data/sale-discount.ts` | Modified | `resolveDiscountInput` branches: code mode → `validateDiscountCode` against the BA business date (`formatInTimeZone(now, CLINIC_TZ)`), throws Spanish on reject, resolves `kind`/`value` from the code row + `reason = "Código {CODE}"` + `codeId`; manual mode unchanged. XOR enforced upstream by the schema. |
+| `src/features/packages/actions/{sell-package,sell-loose-session}.ts` | Modified | parse `discountCode`; wrap `resolveDiscountInput` in try/catch to surface the Spanish code-rejection message; the existing `23514` → `mapDiscountError` path now also covers the trigger race the JS pre-check missed. |
+| `src/features/packages/components/manual-discount-fields.tsx` | Modified | third mode "Código" alongside "%" / "Monto fijo"; single-select — hidden `discountKind` only ever carries `percent`/`fixed`, `discountCode` input only rendered in code mode, so the form emits a clean XOR. Existing labels unchanged (e2e-safe). |
+| `tests/unit/features/discount-codes/discount-error.test.ts` | Created | trigger-prefix mapping + `discountCodeReasonMessage` (8 cases). |
+| `tests/unit/features/packages/schema.test.ts` | Modified | code-XOR-manual rejection on both schemas (+4 cases). |
+| `tests/integration/promotions/discount-codes.test.ts` | Modified | `validateDiscountCode` (active/unknown/inactive/out_of_window/exhausted) + checkout path: `used_count++` on a code-bearing sale via `sellLooseSession`, decrement on void, second use of `max_uses=1` rejected at insert (+7 cases). |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | RED | GREEN | REFACTOR |
+|------|-----------|-------|-----|-------|----------|
+| P3.1 `mapDiscountError` prefixes | `unit/features/discount-codes/discount-error.test.ts` | Unit | ✅ `discountCodeReasonMessage` missing | ✅ 8 cases | ➖ |
+| P3.2 `validateDiscountCode` | `integration/promotions/discount-codes.test.ts` | Integration | ✅ module missing | ✅ 5 cases | ➖ |
+| P3.3 checkout usage / void | same | Integration | ✅ `discountCodeId` not persisted | ✅ 2 cases (incr+void, race reject) | ➖ |
+| P3.4 schema code XOR manual | `unit/features/packages/schema.test.ts` | Unit | ✅ both accepted | ✅ 4 cases | ➖ |
+| P3.5–P3.8 GREEN | — | — | — | ✅ lint/typecheck/test/e2e | ➖ |
+| P3.9 full suite | `pnpm test` + `pnpm e2e` | all | 327+5 baseline | ✅ 345 + 5 | ➖ |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command / result | `pnpm vitest run tests/unit/features/discount-codes/ tests/unit/features/packages/schema.test.ts tests/integration/promotions/discount-codes.test.ts` → 39 passed |
+| Runtime harness / result | `pnpm test` → 345 passed (local Supabase); `pnpm e2e` → 5 passed (run serially) |
+| Rollback boundary | Delete `src/features/discount-codes/**` + `tests/unit/features/discount-codes/**`; revert `discount-errors.ts`, `schema.ts`, `sell-package.ts` (domain+data), `sale-discount.ts`, both actions, `manual-discount-fields.tsx`, the two test files. `discount_code_id` stays null on every sale; the trigger is a no-op. |
+
+### Deviations from design
+
+1. **`mapDiscountError` stays in `discount-errors.ts` (plural)** — tasks.md P3.6 names `discount-error.ts` (singular); the P2 file already exists with `mapDiscountError`, so it was extended in place rather than forked.
+2. **`validateDiscountCode` reason `"unknown"`** (per design/tasks) not `"not_found"` (P3 prompt wording); an empty/blank code also returns `unknown`.
+3. **`validateDiscountCode` lives in `src/features/discount-codes/data/`** (per design deviation #4 / tasks P3.5), not `src/features/promotions/data/` (P3 prompt wording). P6 extends this same file with the ABM CRUD.
+4. **Discount-code UI is a third mode on `ManualDiscountFields`** ("%" / "Monto fijo" / "Código", single-select) rather than a separate sibling component — keeps one XOR-safe control and adds no renamed labels.
+5. **No `discountCode` field added to `sellPackageSchema`'s `promotionId`/combo slot** — `promotionId` is a P4 concern; P3 only adds `discountCode`.
+
 ## Remaining slices
 
-- [~] P2 sale-discounts — implemented, uncommitted, awaiting over-budget delivery decision
-- [ ] P3 discount-codes checkout (targets P2)
+- [x] P2 sale-discounts — committed as `d430b12` (size:exception)
+- [x] P3 discount-codes checkout — committed on `promociones-pr-p3`
 - [ ] P4 / P4a+P4b combos sell
 - [ ] P5 promociones ABM
 - [ ] P6 codigos ABM

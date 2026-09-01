@@ -32,6 +32,7 @@ export async function sellPackageAction(
     discountKind: formData.get("discountKind"),
     discountValue: formData.get("discountValue"),
     discountReason: formData.get("discountReason"),
+    discountCode: formData.get("discountCode"),
   });
 
   if (!parsed.success) {
@@ -45,7 +46,17 @@ export async function sellPackageAction(
 
   const supabase = await createSupabaseClient();
 
-  const discount = await resolveDiscountInput(supabase, parsed.data);
+  let discount;
+  try {
+    discount = await resolveDiscountInput(supabase, parsed.data);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo aplicar el descuento.",
+    };
+  }
 
   let payload;
   try {

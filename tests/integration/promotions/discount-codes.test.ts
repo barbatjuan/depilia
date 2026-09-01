@@ -5,6 +5,9 @@ import {
   seedClient,
   seedDiscountCode,
 } from "../helpers/fixtures";
+import { validateDiscountCode } from "@/features/discount-codes/data/discount-codes";
+import { buildLooseSessionPayload } from "@/features/packages/domain/sell-package";
+import { sellLooseSession } from "@/features/packages/data/sell-package";
 
 const BA_TODAY = () =>
   new Date(
@@ -151,5 +154,157 @@ describe.sequential("0015 promotions — discount-code usage triggers", () => {
       .eq("id", code.id)
       .single();
     expect(fresh?.used_count).toBe(3);
+  });
+});
+
+describe.sequential("validateDiscountCode — advisory checkout pre-check", () => {
+  const db = createServiceRoleClient();
+
+  beforeEach(async () => {
+    await resetDatabase(db);
+  });
+  afterEach(async () => {
+    await resetDatabase(db);
+  });
+
+  it("resolves an active, in-window, non-exhausted code case-insensitively", async () => {
+    await seedDiscountCode(db, {
+      code: "VERANO",
+      kind: "percent",
+      value: 10,
+      max_uses: 100,
+      used_count: 3,
+    });
+    const result = await validateDiscountCode(db, "verano", BA_TODAY());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.row.kind).toBe("percent");
+      expect(result.row.value).toBe(10);
+    }
+  });
+
+  it("returns unknown for a missing code", async () => {
+    const result = await validateDiscountCode(db, "NOPE", BA_TODAY());
+    expect(result).toEqual({ ok: false, reason: "unknown" });
+  });
+
+  it("returns inactive for an archived code", async () => {
+    await seedDiscountCode(db, { code: "OFF", active: false });
+    const result = await validateDiscountCode(db, "OFF", BA_TODAY());
+    expect(result).toEqual({ ok: false, reason: "inactive" });
+  });
+
+  it("returns out_of_window when the BA business date is past valid_to", async () => {
+    await seedDiscountCode(db, {
+      code: "EXPIRED",
+      valid_from: addDays(BA_TODAY(), -10),
+      valid_to: addDays(BA_TODAY(), -1),
+    });
+    const result = await validateDiscountCode(db, "EXPIRED", BA_TODAY());
+    expect(result).toEqual({ ok: false, reason: "out_of_window" });
+  });
+
+  it("returns exhausted when used_count has reached max_uses", async () => {
+    await seedDiscountCode(db, { code: "FULL", max_uses: 2, used_count: 2 });
+    const result = await validateDiscountCode(db, "FULL", BA_TODAY());
+    expect(result).toEqual({ ok: false, reason: "exhausted" });
+  });
+});
+
+describe.sequential("discount code at checkout — usage increments + void decrements", () => {
+  const db = createServiceRoleClient();
+
+  beforeEach(async () => {
+    await resetDatabase(db);
+  });
+  afterEach(async () => {
+    await resetDatabase(db);
+  });
+
+  it("increments used_count on a code-bearing sale and returns it on void", async () => {
+    const client = await seedClient(db, "Code Checkout");
+    const code = await seedDiscountCode(db, {
+      code: "CHECKOUT",
+      kind: "fixed",
+      value: 5,
+      max_uses: 10,
+      used_count: 0,
+    });
+
+    const payload = buildLooseSessionPayload(
+      {
+        templateId: null,
+        templateName: "Sesión",
+        zoneName: "Axilas",
+        sessionPrice: 20,
+        amount: null,
+      },
+      {
+        kind: "fixed",
+        value: 5,
+        reason: "Código CHECKOUT",
+        codeId: code.id,
+        fractionDigits: 2,
+      },
+    );
+    expect(payload).toMatchObject({
+      listTotal: 20,
+      total: 15,
+      discountAmount: 5,
+      discountCodeId: code.id,
+    });
+
+    const { saleId } = await sellLooseSession(db, {
+      clientId: client.id,
+      payload,
+    });
+
+    const afterSale = await db
+      .from("discount_codes")
+      .select("used_count")
+      .eq("id", code.id)
+      .single();
+    expect(afterSale.data?.used_count).toBe(1);
+
+    await db.from("sales").update({ status: "void" }).eq("id", saleId);
+    const afterVoid = await db
+      .from("discount_codes")
+      .select("used_count")
+      .eq("id", code.id)
+      .single();
+    expect(afterVoid.data?.used_count).toBe(0);
+  });
+
+  it("rejects the second use of a max_uses = 1 code at insert time", async () => {
+    const client = await seedClient(db, "Race Client");
+    const code = await seedDiscountCode(db, {
+      code: "ONCE",
+      kind: "fixed",
+      value: 1,
+      max_uses: 1,
+      used_count: 0,
+    });
+    const mkPayload = () =>
+      buildLooseSessionPayload(
+        {
+          templateId: null,
+          templateName: "Sesión",
+          zoneName: "Axilas",
+          sessionPrice: 20,
+          amount: null,
+        },
+        {
+          kind: "fixed",
+          value: 1,
+          reason: "Código ONCE",
+          codeId: code.id,
+          fractionDigits: 2,
+        },
+      );
+
+    await sellLooseSession(db, { clientId: client.id, payload: mkPayload() });
+    await expect(
+      sellLooseSession(db, { clientId: client.id, payload: mkPayload() }),
+    ).rejects.toMatchObject({ code: "23514" });
   });
 });

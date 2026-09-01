@@ -35,20 +35,22 @@ const optionalText = z
  * number; when it is, a `discountReason` is required and the value must be a
  * valid percent (0 < v <= 100) or a positive fixed amount.
  *
- * NOTE (P3): the discount-code input lands here as a `discountCode` field and
- * becomes mutually exclusive with these manual fields — the XOR guard is
- * wired in P3, this slice only ships the manual path.
+ * A discount code (`discountCode`) is mutually exclusive with the manual
+ * fields (spec: "sale-discounts / Code XOR manual"): a payload carrying both
+ * is rejected here, the real validation boundary shared by form and action.
  */
 export const discountFields = {
   discountKind: optionalDiscountKind,
   discountValue: optionalNumeric,
   discountReason: optionalText,
+  discountCode: optionalText,
 };
 
 type DiscountShape = {
   discountKind: "" | "percent" | "fixed";
   discountValue: "" | number;
   discountReason: string;
+  discountCode: string;
 };
 
 export function refineManualDiscount(
@@ -56,7 +58,18 @@ export function refineManualDiscount(
   ctx: z.RefinementCtx,
 ): void {
   const value = typeof data.discountValue === "number" ? data.discountValue : 0;
-  const applying = data.discountKind !== "" || value > 0;
+  const manualApplying = data.discountKind !== "" || value > 0;
+  const hasCode = data.discountCode !== "";
+
+  if (hasCode && manualApplying) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "No se pueden combinar un código y un descuento manual.",
+    });
+    return;
+  }
+
+  const applying = manualApplying;
   if (!applying) return;
 
   if (data.discountKind !== "percent" && data.discountKind !== "fixed") {

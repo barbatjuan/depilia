@@ -71,15 +71,15 @@ Accepted design calls (do not re-litigate): combo sell path uses a dedicated `cr
 
 ## Phase P3: Discount codes at checkout (spec discount-codes)
 
-- [ ] P3.1 RED unit: `mapDiscountError` parses trigger message prefixes `discount_code_inactive` / `out_of_window` / `exhausted` / unknown → Spanish — `tests/unit/features/discount-codes/discount-error.test.ts`
-- [ ] P3.2 RED integ: `validateDiscountCode(supabase, code, businessDate)` → `{ok:true,row:{id,kind,value}}` or `{ok:false,reason:"unknown"|"inactive"|"out_of_window"|"exhausted"}` — `tests/integration/promotions/discount-codes.test.ts`
-- [ ] P3.3 RED integ: valid code at checkout → `used_count++` atomically; later void → decrement — same file
-- [ ] P3.4 RED unit: form schema rejects code + manual discount on the same sale (extend P2 rule with the `discountCode` field) — `tests/unit/features/packages/schema.test.ts`
-- [ ] P3.5 GREEN `src/features/discount-codes/data/discount-codes.ts` — `validateDiscountCode` advisory pre-check
-- [ ] P3.6 GREEN `src/features/promotions/domain/discount-error.ts` — `mapDiscountError`
-- [ ] P3.7 GREEN code input in `sell-package-form.tsx` + `sell-loose-session-form.tsx`; mutually exclusive with manual fields in the UI
-- [ ] P3.8 GREEN both actions resolve code → `discount_code_id`, compute `discount_amount` via `applyDiscount`, surface Spanish errors
-- [ ] P3.9 GREEN run `pnpm test`
+- [x] P3.1 RED unit: `mapDiscountError` parses trigger message prefixes `discount_code_inactive` / `out_of_window` / `exhausted` / unknown → Spanish — `tests/unit/features/discount-codes/discount-error.test.ts`
+- [x] P3.2 RED integ: `validateDiscountCode(supabase, code, businessDate)` → `{ok:true,row:{id,kind,value}}` or `{ok:false,reason:"unknown"|"inactive"|"out_of_window"|"exhausted"}` — `tests/integration/promotions/discount-codes.test.ts`
+- [x] P3.3 RED integ: valid code at checkout → `used_count++` atomically; later void → decrement — same file
+- [x] P3.4 RED unit: form schema rejects code + manual discount on the same sale (extend P2 rule with the `discountCode` field) — `tests/unit/features/packages/schema.test.ts`
+- [x] P3.5 GREEN `src/features/discount-codes/data/discount-codes.ts` — `validateDiscountCode` advisory pre-check
+- [x] P3.6 GREEN `src/features/promotions/domain/discount-error.ts` — `mapDiscountError`
+- [x] P3.7 GREEN code input in `sell-package-form.tsx` + `sell-loose-session-form.tsx`; mutually exclusive with manual fields in the UI
+- [x] P3.8 GREEN both actions resolve code → `discount_code_id`, compute `discount_amount` via `applyDiscount`, surface Spanish errors
+- [x] P3.9 GREEN run `pnpm test`
 
 ## Phase P4: Combos & bonus sell path (spec promotions, service-catalog)
 

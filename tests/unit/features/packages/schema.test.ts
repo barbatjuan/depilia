@@ -152,6 +152,56 @@ describe("sellPackageSchema — manual discount", () => {
   });
 });
 
+describe("sellPackageSchema — discount code XOR manual", () => {
+  const base = {
+    clientId: CLIENT,
+    templateId: TEMPLATE,
+    zoneId: "",
+    sessionCount: "",
+    price: "",
+    discountKind: "",
+    discountValue: "",
+    discountReason: "",
+    discountCode: "",
+  };
+
+  it("accepts a bare discount code with no manual fields", () => {
+    const result = sellPackageSchema.safeParse({ ...base, discountCode: "VERANO" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a payload carrying both a discount code and a manual discount", () => {
+    const result = sellPackageSchema.safeParse({
+      ...base,
+      discountCode: "VERANO",
+      discountKind: "percent",
+      discountValue: "10",
+      discountReason: "Cliente frecuente",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().formErrors).toContain(
+        "No se pueden combinar un código y un descuento manual.",
+      );
+    }
+  });
+});
+
+describe("sellLooseSessionSchema — discount code XOR manual", () => {
+  it("rejects a loose sale carrying both a code and a manual discount", () => {
+    const result = sellLooseSessionSchema.safeParse({
+      clientId: CLIENT,
+      templateId: "33333333-3333-3333-3333-333333333333",
+      amount: "15000",
+      discountKind: "fixed",
+      discountValue: "2000",
+      discountReason: "Promo",
+      discountCode: "VERANO",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("sellLooseSessionSchema — manual discount", () => {
   it("requires a reason when a discount is entered", () => {
     const result = sellLooseSessionSchema.safeParse({

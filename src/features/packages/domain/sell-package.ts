@@ -19,6 +19,8 @@ export type SaleDiscountInput = {
   reason: string;
   by?: string | null;
   fractionDigits?: number;
+  /** Set when the discount comes from a `discount_codes` row (P3). */
+  codeId?: string | null;
 };
 
 export type SaleDiscountFields = {
@@ -27,6 +29,7 @@ export type SaleDiscountFields = {
   discountAmount: number;
   discountReason: string | null;
   discountedBy: string | null;
+  discountCodeId: string | null;
 };
 
 export function resolveSaleDiscount(
@@ -40,6 +43,7 @@ export function resolveSaleDiscount(
       discountAmount: 0,
       discountReason: null,
       discountedBy: null,
+      discountCodeId: null,
     };
   }
 
@@ -68,6 +72,7 @@ export function resolveSaleDiscount(
     discountAmount: result.discountAmount,
     discountReason: reason,
     discountedBy: discount.by ?? null,
+    discountCodeId: discount.codeId ?? null,
   };
 }
 export type SizeCategory =
@@ -110,6 +115,7 @@ export type PackageSalePayload = {
   discountAmount?: number;
   discountReason?: string | null;
   discountedBy?: string | null;
+  discountCodeId?: string | null;
 };
 
 /**
@@ -170,6 +176,7 @@ function withDiscount(
     discountAmount: d.discountAmount,
     discountReason: d.discountReason,
     discountedBy: d.discountedBy,
+    discountCodeId: d.discountCodeId,
   };
 }
 
@@ -190,6 +197,7 @@ export type LooseSessionPayload = {
   discountAmount?: number;
   discountReason?: string | null;
   discountedBy?: string | null;
+  discountCodeId?: string | null;
 };
 
 /**
@@ -223,5 +231,6 @@ export function buildLooseSessionPayload(
     discountAmount: d.discountAmount,
     discountReason: d.discountReason,
     discountedBy: d.discountedBy,
+    discountCodeId: d.discountCodeId,
   };
 }
