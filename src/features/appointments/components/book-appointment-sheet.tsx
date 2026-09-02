@@ -14,7 +14,7 @@ import {
 import { BookAppointmentForm } from "@/features/appointments/components/book-appointment-form";
 import { createAppointmentAction } from "@/features/appointments/actions/create-appointment";
 import type { ClientRow } from "@/features/clients/data/clients";
-import type { BodyZoneOption } from "@/features/packages/data/package-templates";
+import type { GenderedZoneOption } from "@/features/packages/data/package-templates";
 
 /** Agenda's "nuevo turno" entry point, same slide-over pattern as PackageSaleActions. */
 export function BookAppointmentSheet({
@@ -23,7 +23,7 @@ export function BookAppointmentSheet({
   defaultDateTime,
 }: {
   clients: ClientRow[];
-  zones: BodyZoneOption[];
+  zones: GenderedZoneOption[];
   defaultDateTime?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -40,8 +40,8 @@ export function BookAppointmentSheet({
         <SheetHeader>
           <SheetTitle>Nuevo turno</SheetTitle>
           <SheetDescription>
-            Elegí cliente, zona y horario. Opcionalmente vinculá una sesión
-            de paquete o suelta ya pagada.
+            Elegí cliente, sexo, zona y horario. Opcionalmente vinculá una
+            sesión de paquete o suelta ya pagada.
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4 pb-4">
