@@ -5,7 +5,7 @@ import { formatMoney } from "@/lib/money";
 import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { getReceivables } from "@/features/accounting/data/receivables";
 import { buildReceivables } from "@/features/accounting/domain/receivables";
-import { toCsv } from "@/features/accounting/domain/csv";
+import { toCsv } from "@/lib/csv";
 import { ExportCsvButton } from "@/features/accounting/components/export-csv-button";
 import { ReceivablesTable } from "@/features/accounting/components/receivables-table";
 import { Button } from "@/components/ui/button";

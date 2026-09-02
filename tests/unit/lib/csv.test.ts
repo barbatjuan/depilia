@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toCsv } from "@/features/accounting/domain/csv";
+import { toCsv } from "@/lib/csv";
 
 const BOM = "﻿";
 

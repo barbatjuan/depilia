@@ -10,7 +10,7 @@ import { buildExpenseBreakdown } from "@/features/accounting/domain/expense-repo
 import { buildBusinessMetrics } from "@/features/accounting/domain/business-metrics";
 import { buildPaymentMix } from "@/features/dashboard/domain/payment-mix";
 import { currencyFractionDigits } from "@/features/promotions/domain/discount";
-import { toCsv } from "@/features/accounting/domain/csv";
+import { toCsv } from "@/lib/csv";
 import { getAccountingYear } from "@/features/accounting/data/accounting-year";
 import { getIncomeReport } from "@/features/accounting/data/income-report";
 import { getExpenseReport } from "@/features/accounting/data/expense-report";
