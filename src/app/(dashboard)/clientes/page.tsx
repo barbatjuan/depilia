@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, Plus } from "lucide-react";
+import { CalendarClock, HeartHandshake, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { listClients } from "@/features/clients/data/clients";
 import { ClientTable } from "@/features/clients/components/client-table";
@@ -29,6 +29,12 @@ export default async function ClientesPage({
             <Link href="/clientes/recuperar">
               <HeartHandshake className="size-4" />
               Clientes a recuperar
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/clientes/recontacto">
+              <CalendarClock className="size-4" />
+              Recontacto por zona
             </Link>
           </Button>
           <Button asChild>

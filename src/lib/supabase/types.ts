@@ -113,16 +113,19 @@ export type Database = {
           archived: boolean
           id: string
           name: string
+          recommended_weeks: number
         }
         Insert: {
           archived?: boolean
           id?: string
           name: string
+          recommended_weeks?: number
         }
         Update: {
           archived?: boolean
           id?: string
           name?: string
+          recommended_weeks?: number
         }
         Relationships: []
       }

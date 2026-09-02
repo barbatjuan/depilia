@@ -68,16 +68,23 @@ async function main() {
   //    tables, so we can't assume the migration seed survived). Real Spanish
   //    tariff areas: the 5 English demo zones from 0010 are archived by
   //    migration 0012.
+  // `recommended_weeks` (migration 0020) drives "Recontacto por zona" — a
+  // spread of intervals so the demo shows the per-zone nature of the screen.
   const serviceSpecs = [
-    { name: "Piernas completas", gender: "mujer", size_category: "grande", session_price: 40, bono_price: 210, default_sessions: 6, vat_rate: 0.21 },
-    { name: "Axilas", gender: "mujer", size_category: "pequena", session_price: 10, bono_price: 48, default_sessions: 6, vat_rate: 0.21 },
+    { name: "Piernas completas", gender: "mujer", size_category: "grande", session_price: 40, bono_price: 210, default_sessions: 6, vat_rate: 0.21, recommended_weeks: 8 },
+    { name: "Axilas", gender: "mujer", size_category: "pequena", session_price: 10, bono_price: 48, default_sessions: 6, vat_rate: 0.21, recommended_weeks: 5 },
     // Exempt on purpose — demo variety so the IVA breakdown shows more than one rate.
-    { name: "Facial Completo", gender: "mujer", size_category: "mediana", session_price: 15, bono_price: 78, default_sessions: 6, vat_rate: 0 },
-    { name: "Muslos", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21 },
-    { name: "Media espalda", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21 },
+    { name: "Facial Completo", gender: "mujer", size_category: "mediana", session_price: 15, bono_price: 78, default_sessions: 6, vat_rate: 0, recommended_weeks: 6 },
+    { name: "Muslos", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21, recommended_weeks: 7 },
+    { name: "Media espalda", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21, recommended_weeks: 7 },
   ];
   for (const s of serviceSpecs) {
-    await db.from("body_zones").upsert({ name: s.name }, { onConflict: "name" });
+    await db
+      .from("body_zones")
+      .upsert(
+        { name: s.name, recommended_weeks: s.recommended_weeks },
+        { onConflict: "name" },
+      );
   }
   const { data: zones, error: zonesErr } = await db.from("body_zones").select("id, name");
   die("load body_zones", zonesErr);
@@ -401,7 +408,49 @@ async function main() {
     totalExpenses += expenseInserts.length;
   }
 
+  // 8b. Lapsed bonos — so "Recontacto por zona" has 🔴 rows in the demo. For a
+  //     few packaged clients: no session booked, last one was 12-16 weeks ago
+  //     (past 2x every zone interval), and 2 sessions still on the bono.
+  let lapsedBonos = 0;
+  for (const [i, p] of packaged.slice(0, 3).entries()) {
+    const lapsedAt = new Date(
+      Date.now() - (12 + i * 2) * 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    await db
+      .from("appointments")
+      .update({ status: "cancelled" })
+      .eq("client_package_id", p.packageId)
+      .eq("status", "scheduled");
+    const { data: doneAppts } = await db
+      .from("appointments")
+      .select("id")
+      .eq("client_package_id", p.packageId)
+      .eq("status", "completed");
+    if (doneAppts?.length) {
+      await db
+        .from("appointments")
+        .update({ scheduled_at: lapsedAt })
+        .eq("client_package_id", p.packageId)
+        .eq("status", "completed");
+    } else {
+      await db.from("appointments").insert({
+        client_id: p.client_id,
+        client_package_id: p.packageId,
+        zone_id: zoneId[p.template.name] ?? zoneId[serviceSpecs[0].name],
+        scheduled_at: lapsedAt,
+        duration_minutes: 30,
+        status: "completed",
+      });
+    }
+    await db
+      .from("client_packages")
+      .update({ sessions_used: p.total_sessions - 2 })
+      .eq("id", p.packageId);
+    lapsedBonos++;
+  }
+
   console.log(`• ${totalAppointments} appointments (${totalCompleted} completed) across 3 months`);
+  console.log(`• ${lapsedBonos} bonos marcados como atrasados (Recontacto por zona)`);
   console.log(`• ${saleCount} sales, ${paymentCount} payments across 3 months`);
   console.log(`• ${totalExpenses} expenses across 3 months`);
 
