@@ -7,7 +7,9 @@ import { useMoneyFormat } from "@/components/money-format-provider";
 
 const timeFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
-  timeStyle: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
 });
 
 /**

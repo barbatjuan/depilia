@@ -59,6 +59,24 @@ export async function listMovements(
   return (data ?? []).map((row) => toRow(row as RawCashMovement));
 }
 
+/**
+ * Movements whose parent session's `business_date` falls in `[from, to)` —
+ * backs the monthly cash report's manualIn/manualOut totals (PASO 5).
+ */
+export async function listMovementsInRange(
+  supabase: AppSupabaseClient,
+  from: string,
+  to: string,
+): Promise<CashMovementRow[]> {
+  const { data, error } = await supabase
+    .from("cash_movements")
+    .select(`${SELECT_COLUMNS}, cash_sessions!inner(business_date)`)
+    .gte("cash_sessions.business_date", from)
+    .lt("cash_sessions.business_date", to);
+  if (error) throw error;
+  return (data ?? []).map((row) => toRow(row as unknown as RawCashMovement));
+}
+
 export async function createMovement(
   supabase: AppSupabaseClient,
   input: MovementInput,

@@ -22,8 +22,10 @@ import {
 } from "@/features/cash/data/cash-balance";
 import { openSessionAction } from "@/features/cash/actions/open-session";
 import { closeSessionAction } from "@/features/cash/actions/close-session";
+import { reopenSessionAction } from "@/features/cash/actions/reopen-session";
 import { registerMovementAction } from "@/features/cash/actions/register-movement";
 import { OpenSessionForm } from "@/features/cash/components/open-session-form";
+import { ReopenSessionForm } from "@/features/cash/components/reopen-session-form";
 import { CloseSessionForm } from "@/features/cash/components/close-session-form";
 import { MovementForm } from "@/features/cash/components/movement-form";
 import { MovementTable } from "@/features/cash/components/movement-table";
@@ -96,10 +98,24 @@ export default async function CajaPage() {
   ]);
 
   if (session.status === "closed") {
+    const boundReopen = reopenSessionAction.bind(null, session.id);
     return (
       <div className="flex flex-col gap-6">
         {header}
         <SessionSummaryCard session={session} theoretical={null} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Caja cerrada</CardTitle>
+            <CardDescription>
+              El arqueo del {session.businessDate} ya quedó registrado. La
+              próxima caja se abre mañana — o reabrí esta si todavía vas a
+              cobrar hoy.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReopenSessionForm action={boundReopen} />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Movimientos</CardTitle>

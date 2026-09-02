@@ -28,3 +28,14 @@ export function deriveArqueo(
     status: difference > 0 ? "sobrante" : "faltante",
   };
 }
+
+/**
+ * Classifies an already-stored `cash_sessions.difference` (no recompute) —
+ * used by the monthly cash report (PASO 5), which reads each closed
+ * session's frozen difference rather than re-deriving it from theoretical vs
+ * counted. Same epsilon as `deriveArqueo` so the two never disagree.
+ */
+export function classifyArqueoDifference(difference: number): ArqueoStatus {
+  if (Math.abs(difference) < EXACTO_EPSILON) return "exacto";
+  return difference > 0 ? "sobrante" : "faltante";
+}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ARQUEO_LABEL, deriveArqueo } from "@/features/cash/domain/arqueo";
+import {
+  ARQUEO_LABEL,
+  classifyArqueoDifference,
+  deriveArqueo,
+} from "@/features/cash/domain/arqueo";
 
 describe("deriveArqueo", () => {
   it("reports a shortfall (faltante) when the count is below the theoretical", () => {
@@ -23,6 +27,16 @@ describe("deriveArqueo", () => {
   it("treats a sub-cent rounding gap as exacto (|diff| < 0.005)", () => {
     expect(deriveArqueo(7000.004, 7000).status).toBe("exacto");
     expect(deriveArqueo(7000.006, 7000).status).toBe("sobrante");
+  });
+});
+
+describe("classifyArqueoDifference", () => {
+  it("agrees with deriveArqueo for the same values, without recomputing", () => {
+    expect(classifyArqueoDifference(-200)).toBe("faltante");
+    expect(classifyArqueoDifference(250)).toBe("sobrante");
+    expect(classifyArqueoDifference(0)).toBe("exacto");
+    expect(classifyArqueoDifference(0.004)).toBe("exacto");
+    expect(classifyArqueoDifference(0.006)).toBe("sobrante");
   });
 });
 

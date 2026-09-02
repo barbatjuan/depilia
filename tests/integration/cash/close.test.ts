@@ -137,20 +137,4 @@ describe.sequential("cash_sessions close: arqueo snapshot", () => {
     expect(Number(after?.theoretical_amount)).toBe(8000);
     expect(Number(after?.difference)).toBe(0);
   });
-
-  it("refuses to reopen a closed session", async () => {
-    const id = await openToday();
-    await db
-      .from("cash_sessions")
-      .update({ status: "closed", counted_amount: 5000, closed_by: staffId })
-      .eq("id", id);
-
-    const { error } = await db
-      .from("cash_sessions")
-      .update({ status: "open" })
-      .eq("id", id);
-
-    expect(error).not.toBeNull();
-    expect(error?.message.toLowerCase()).toContain("closed");
-  });
 });
