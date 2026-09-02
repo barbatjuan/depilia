@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { HeartHandshake, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { listClients } from "@/features/clients/data/clients";
 import { ClientTable } from "@/features/clients/components/client-table";
@@ -17,19 +17,27 @@ export default async function ClientesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground">
             {clients.length} cliente{clients.length === 1 ? "" : "s"}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/clientes/nuevo">
-            <Plus className="size-4" />
-            Nuevo cliente
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/clientes/recuperar">
+              <HeartHandshake className="size-4" />
+              Clientes a recuperar
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/clientes/nuevo">
+              <Plus className="size-4" />
+              Nuevo cliente
+            </Link>
+          </Button>
+        </div>
       </div>
       <ClientSearch defaultValue={q ?? ""} />
       <ClientTable clients={clients} />
