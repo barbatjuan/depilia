@@ -38,6 +38,21 @@ export function canTransitionAppointmentStatus(
 }
 
 /**
+ * Confirmation is orthogonal to `status` (migration `0018`): `confirmed_at`
+ * is `null` until the client confirms the turno.
+ */
+export function appointmentConfirmationLabel(
+  confirmedAt: string | null,
+): "Confirmada" | "Sin confirmar" {
+  return confirmedAt ? "Confirmada" : "Sin confirmar";
+}
+
+/** A turno can only be edited (time / zone) while it is still scheduled. */
+export function canEditAppointment(status: AppointmentStatus): boolean {
+  return status === "scheduled";
+}
+
+/**
  * Returns a friendly Spanish message when a transition is not allowed, or
  * `null` when it is — lets callers surface a clear error before ever
  * calling the `set_appointment_status` RPC.

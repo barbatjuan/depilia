@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  appointmentConfirmationLabel,
+  canEditAppointment,
   canTransitionAppointmentStatus,
   describeStatusTransitionError,
   STATUS_LABEL,
@@ -77,5 +79,23 @@ describe("STATUS_LABEL", () => {
     expect(STATUS_LABEL.completed).toBe("Completado");
     expect(STATUS_LABEL.cancelled).toBe("Cancelado");
     expect(STATUS_LABEL.no_show).toBe("Ausente");
+  });
+});
+
+describe("appointmentConfirmationLabel", () => {
+  it("is 'Sin confirmar' until confirmed_at is set", () => {
+    expect(appointmentConfirmationLabel(null)).toBe("Sin confirmar");
+    expect(appointmentConfirmationLabel("2026-09-01T12:00:00Z")).toBe(
+      "Confirmada",
+    );
+  });
+});
+
+describe("canEditAppointment", () => {
+  it("only allows editing a scheduled turno", () => {
+    expect(canEditAppointment("scheduled")).toBe(true);
+    expect(canEditAppointment("completed")).toBe(false);
+    expect(canEditAppointment("cancelled")).toBe(false);
+    expect(canEditAppointment("no_show")).toBe(false);
   });
 });

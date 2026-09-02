@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appointmentStatusSchema,
   createAppointmentSchema,
-  rescheduleAppointmentSchema,
+  editAppointmentSchema,
 } from "@/features/appointments/schema";
 
 const validBase = {
@@ -60,9 +60,10 @@ describe("createAppointmentSchema", () => {
   });
 });
 
-describe("rescheduleAppointmentSchema", () => {
-  it("accepts a valid new time and duration", () => {
-    const result = rescheduleAppointmentSchema.safeParse({
+describe("editAppointmentSchema", () => {
+  it("accepts a valid zone, new time and duration", () => {
+    const result = editAppointmentSchema.safeParse({
+      zoneId: "22222222-2222-2222-2222-222222222222",
       scheduledAt: "2026-08-24T12:00:00.000Z",
       durationMinutes: "45",
     });
@@ -70,8 +71,18 @@ describe("rescheduleAppointmentSchema", () => {
   });
 
   it("rejects a missing scheduledAt", () => {
-    const result = rescheduleAppointmentSchema.safeParse({
+    const result = editAppointmentSchema.safeParse({
+      zoneId: "22222222-2222-2222-2222-222222222222",
       scheduledAt: "",
+      durationMinutes: "30",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a non-uuid zone", () => {
+    const result = editAppointmentSchema.safeParse({
+      zoneId: "not-a-uuid",
+      scheduledAt: "2026-08-24T12:00:00.000Z",
       durationMinutes: "30",
     });
     expect(result.success).toBe(false);

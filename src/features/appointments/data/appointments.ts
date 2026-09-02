@@ -3,7 +3,7 @@ import type { AppointmentStatus } from "@/features/appointments/domain/status";
 import { mapAppointmentError } from "@/features/appointments/domain/appointment-errors";
 import type {
   CreateAppointmentInput,
-  RescheduleAppointmentInput,
+  EditAppointmentInput,
 } from "@/features/appointments/schema";
 
 export type AppointmentListRow = {
@@ -15,12 +15,13 @@ export type AppointmentListRow = {
   scheduledAt: string;
   durationMinutes: number;
   status: string;
+  confirmedAt: string | null;
   clientPackageId: string | null;
   notes: string | null;
 };
 
 const LIST_SELECT =
-  "id, client_id, zone_id, scheduled_at, duration_minutes, status, client_package_id, notes, clients(first_name, last_name), body_zones(name)";
+  "id, client_id, zone_id, scheduled_at, duration_minutes, status, confirmed_at, client_package_id, notes, clients(first_name, last_name), body_zones(name)";
 
 function toListRow(row: {
   id: string;
@@ -29,6 +30,7 @@ function toListRow(row: {
   scheduled_at: string;
   duration_minutes: number;
   status: string;
+  confirmed_at: string | null;
   client_package_id: string | null;
   notes: string | null;
   clients: { first_name: string; last_name: string } | null;
@@ -45,6 +47,7 @@ function toListRow(row: {
     scheduledAt: row.scheduled_at,
     durationMinutes: row.duration_minutes,
     status: row.status,
+    confirmedAt: row.confirmed_at,
     clientPackageId: row.client_package_id,
     notes: row.notes,
   };
@@ -115,21 +118,44 @@ export async function createAppointment(
 }
 
 /**
- * Reschedules (time/duration only) an existing appointment — spec:
- * "Edit/reschedule an appointment". Subject to the same single-chair
- * overlap constraint as creation.
+ * Edits a still-scheduled appointment — date/time, duration and zone (spec:
+ * "Edit/reschedule an appointment"). Subject to the same single-chair overlap
+ * `EXCLUDE` constraint as creation; a rejection is mapped to a friendly
+ * Spanish message.
  */
-export async function rescheduleAppointment(
+export async function updateAppointment(
   supabase: AppSupabaseClient,
   id: string,
-  input: RescheduleAppointmentInput,
+  input: EditAppointmentInput,
 ): Promise<AppointmentListRow> {
   const { data, error } = await supabase
     .from("appointments")
     .update({
       scheduled_at: input.scheduledAt,
       duration_minutes: input.durationMinutes,
+      zone_id: input.zoneId,
     })
+    .eq("id", id)
+    .select(LIST_SELECT)
+    .single();
+  if (error) throw new Error(mapAppointmentError(error));
+
+  return toListRow(data);
+}
+
+/**
+ * Toggles a turno's confirmation flag (migration `0018`). `confirmed` true →
+ * stamp `now()`, false → clear it. Orthogonal to `status`, so this is a plain
+ * update, not a `set_appointment_status` transition.
+ */
+export async function setAppointmentConfirmation(
+  supabase: AppSupabaseClient,
+  id: string,
+  confirmed: boolean,
+): Promise<AppointmentListRow> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .update({ confirmed_at: confirmed ? new Date().toISOString() : null })
     .eq("id", id)
     .select(LIST_SELECT)
     .single();

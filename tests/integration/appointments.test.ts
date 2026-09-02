@@ -11,8 +11,8 @@ import {
 import {
   createAppointment,
   listAppointmentsInRange,
-  rescheduleAppointment,
   setAppointmentStatus,
+  updateAppointment,
 } from "@/features/appointments/data/appointments";
 
 describe.sequential("appointments data layer", () => {
@@ -116,7 +116,8 @@ describe.sequential("appointments data layer", () => {
     });
 
     await expect(
-      rescheduleAppointment(db, movable.id, {
+      updateAppointment(db, movable.id, {
+        zoneId: zone.id,
         scheduledAt: "2026-08-24T13:10:00.000Z",
         durationMinutes: 30,
       }),
@@ -125,8 +126,9 @@ describe.sequential("appointments data layer", () => {
     );
   });
 
-  it("allows rescheduling into a free slot", async () => {
+  it("allows editing into a free slot, including the zone", async () => {
     const zone = await seedZone(db, "Piernas");
+    const otherZone = await seedZone(db, "Axilas");
     const client = await seedClient(db, "Nora");
     const appt = await seedAppointment(db, {
       client_id: client.id,
@@ -135,13 +137,15 @@ describe.sequential("appointments data layer", () => {
       duration_minutes: 30,
     });
 
-    const rescheduled = await rescheduleAppointment(db, appt.id, {
+    const edited = await updateAppointment(db, appt.id, {
+      zoneId: otherZone.id,
       scheduledAt: "2026-08-24T17:00:00.000Z",
       durationMinutes: 45,
     });
 
-    expect(rescheduled.scheduledAt).toBe("2026-08-24T17:00:00+00:00");
-    expect(rescheduled.durationMinutes).toBe(45);
+    expect(edited.scheduledAt).toBe("2026-08-24T17:00:00+00:00");
+    expect(edited.durationMinutes).toBe(45);
+    expect(edited.zoneId).toBe(otherZone.id);
   });
 
   it("marking complete decrements sessions_used via the ledger trigger (spec: session decrement)", async () => {

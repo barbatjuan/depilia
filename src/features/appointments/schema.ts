@@ -45,8 +45,13 @@ export const createAppointmentSchema = z
 
 export type CreateAppointmentInput = z.infer<typeof createAppointmentSchema>;
 
-/** Reschedule schema (spec: "Edit/reschedule an appointment"). */
-export const rescheduleAppointmentSchema = z.object({
+/**
+ * Full edit of a still-scheduled turno: date/time, duration and zone. The
+ * session link is not edited here — it stays as booked. Same single-chair
+ * overlap constraint as creation.
+ */
+export const editAppointmentSchema = z.object({
+  zoneId: z.string().uuid("Elegí una zona."),
   scheduledAt: z.string().min(1, "Elegí una fecha y hora."),
   durationMinutes: z.coerce
     .number()
@@ -54,9 +59,7 @@ export const rescheduleAppointmentSchema = z.object({
     .positive("La duración debe ser mayor a 0."),
 });
 
-export type RescheduleAppointmentInput = z.infer<
-  typeof rescheduleAppointmentSchema
->;
+export type EditAppointmentInput = z.infer<typeof editAppointmentSchema>;
 
 /**
  * Valid `set_appointment_status` targets from the UI — `scheduled` is

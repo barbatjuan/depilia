@@ -15,7 +15,10 @@ import {
 import { AgendaCalendar } from "@/components/agenda-calendar";
 import { BookAppointmentSheet } from "@/features/appointments/components/book-appointment-sheet";
 import { listClients } from "@/features/clients/data/clients";
-import { listActiveBodyZones } from "@/features/packages/data/package-templates";
+import {
+  listActiveBodyZones,
+  listGenderedZones,
+} from "@/features/packages/data/package-templates";
 import { Button } from "@/components/ui/button";
 
 const dayLabelFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -50,9 +53,10 @@ export default async function AgendaPage({
       : getClinicWeekBounds(referenceDate);
 
   const supabase = await createClient();
-  const [appointments, clients, zones] = await Promise.all([
+  const [appointments, clients, zones, bodyZones] = await Promise.all([
     listAppointmentsInRange(supabase, bounds),
     listClients(supabase),
+    listGenderedZones(supabase),
     listActiveBodyZones(supabase),
   ]);
 
@@ -114,6 +118,7 @@ export default async function AgendaPage({
         view={view}
         rangeStart={bounds.start}
         appointments={appointments}
+        zones={bodyZones}
       />
     </div>
   );
