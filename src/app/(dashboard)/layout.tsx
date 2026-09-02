@@ -24,21 +24,25 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const moneyFormat = await getMoneyFormat(supabase);
+  const [moneyFormat, { data: userData }] = await Promise.all([
+    getMoneyFormat(supabase),
+    supabase.auth.getUser(),
+  ]);
 
   return (
     <MoneyFormatProvider value={moneyFormat}>
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
-          <span className="text-sm font-medium">Depilia</span>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+      <SidebarProvider>
+        <AppSidebar userEmail={userData.user?.email ?? undefined} />
+        <SidebarInset className="bg-background">
+          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border/70 bg-background/80 px-4 backdrop-blur-sm">
+            <SidebarTrigger className="text-muted-foreground" />
+            <Separator orientation="vertical" className="h-4" />
+          </header>
+          <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
     </MoneyFormatProvider>
   );
 }

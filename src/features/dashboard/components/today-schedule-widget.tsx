@@ -6,13 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type badgeVariants } from "@/components/ui/badge";
+import type { VariantProps } from "class-variance-authority";
 import type { TodayAppointment } from "@/features/dashboard/data/get-today-schedule";
 
 const timeFormatter = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
   hour: "2-digit",
   minute: "2-digit",
+  hour12: false,
 });
 
 const STATUS_LABEL: Record<string, string> = {
@@ -22,14 +24,13 @@ const STATUS_LABEL: Record<string, string> = {
   no_show: "Ausente",
 };
 
-const STATUS_VARIANT: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
+
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
   scheduled: "default",
-  completed: "secondary",
-  cancelled: "outline",
-  no_show: "destructive",
+  completed: "success",
+  cancelled: "ghost",
+  no_show: "warning",
 };
 
 export function TodayScheduleWidget({
@@ -60,15 +61,17 @@ export function TodayScheduleWidget({
             {appointments.map((appt) => (
               <li
                 key={appt.id}
-                className="flex items-center justify-between gap-3 rounded-md border p-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card p-3 transition-colors hover:border-border"
               >
-                <div className="flex items-center gap-3">
-                  <span className="w-14 shrink-0 text-sm font-medium tabular-nums">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="tnum shrink-0 text-sm font-medium whitespace-nowrap text-muted-foreground">
                     {timeFormatter.format(new Date(appt.scheduledAt))}
                   </span>
-                  <div>
-                    <p className="text-sm font-medium">{appt.clientName}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {appt.clientName}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
                       {appt.zoneName}
                     </p>
                   </div>

@@ -4,6 +4,7 @@ import {
   groupAppointmentsByWeekday,
 } from "@/features/appointments/domain/agenda-grid";
 import type { AppointmentListRow } from "@/features/appointments/data/appointments";
+import type { BodyZoneOption } from "@/features/packages/data/package-templates";
 import { AppointmentCard } from "@/features/appointments/components/appointment-card";
 
 const START_HOUR = 8;
@@ -26,10 +27,12 @@ export function AgendaCalendar({
   view,
   rangeStart,
   appointments,
+  zones,
 }: {
   view: "day" | "week";
   rangeStart: Date;
   appointments: AppointmentListRow[];
+  zones: BodyZoneOption[];
 }) {
   if (appointments.length === 0) {
     return (
@@ -68,12 +71,16 @@ export function AgendaCalendar({
               <span className="w-14 shrink-0 pt-1 text-sm font-medium text-muted-foreground tabular-nums">
                 {String(hour).padStart(2, "0")}:00
               </span>
-              <div className="flex flex-1 flex-col gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
                 {items.length === 0 ? (
                   <span className="text-xs text-muted-foreground/60">—</span>
                 ) : (
                   items.map((appt) => (
-                    <AppointmentCard key={appt.id} appointment={appt} />
+                    <AppointmentCard
+                      key={appt.id}
+                      appointment={appt}
+                      zones={zones}
+                    />
                   ))
                 )}
               </div>
@@ -85,26 +92,47 @@ export function AgendaCalendar({
   }
 
   const columns = groupAppointmentsByWeekday(appointments, rangeStart);
+  const todayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(new Date());
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
       {columns.map((dayAppointments, index) => {
         const columnDate = new Date(
           rangeStart.getTime() + index * 24 * 60 * 60 * 1000,
         );
+        const isToday =
+          new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Argentina/Buenos_Aires",
+          }).format(columnDate) === todayKey;
         return (
-          <div key={index} className="flex flex-col gap-2 rounded-md border p-2">
-            <p className="text-center text-xs font-medium text-muted-foreground capitalize">
+          <div
+            key={index}
+            className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card/40 p-2"
+          >
+            <p
+              className={
+                isToday
+                  ? "text-center text-xs font-semibold text-primary capitalize"
+                  : "text-center text-xs font-medium text-muted-foreground capitalize"
+              }
+            >
               {weekdayFormatter.format(columnDate)}
             </p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               {dayAppointments.length === 0 ? (
-                <span className="text-center text-xs text-muted-foreground/60">
-                  Sin turnos
+                <span className="py-1 text-center text-[0.7rem] text-muted-foreground/50">
+                  —
                 </span>
               ) : (
                 dayAppointments.map((appt) => (
-                  <AppointmentCard key={appt.id} appointment={appt} />
+                  <AppointmentCard
+                    key={appt.id}
+                    appointment={appt}
+                    zones={zones}
+                    variant="compact"
+                  />
                 ))
               )}
             </div>
