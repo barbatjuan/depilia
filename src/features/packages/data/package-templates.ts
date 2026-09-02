@@ -12,7 +12,7 @@ export async function listActivePackageTemplates(
   const { data, error } = await supabase
     .from("package_templates")
     .select(
-      "id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, body_zones(name)",
+      "id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, vat_rate, body_zones(name)",
     )
     .eq("active", true)
     .order("name", { ascending: true });
@@ -28,6 +28,7 @@ export async function listActivePackageTemplates(
     defaultSessions: row.default_sessions,
     sessionPrice: row.session_price,
     bonoPrice: row.bono_price,
+    vatRate: row.vat_rate,
   }));
 }
 
@@ -45,4 +46,28 @@ export async function listActiveBodyZones(
   if (error) throw error;
 
   return data ?? [];
+}
+
+export type GenderedZoneOption = { id: string; name: string; gender: string };
+
+/**
+ * Every (zone, gender) pair the catalog has an ACTIVE tariff for — the
+ * booking form filters this by the chosen gender so a zone with no tariff
+ * for that gender never appears. Derived from `package_templates`, not the
+ * raw `body_zones` table (which is genderless).
+ */
+export async function listGenderedZones(
+  supabase: AppSupabaseClient,
+): Promise<GenderedZoneOption[]> {
+  const { data, error } = await supabase
+    .from("package_templates")
+    .select("zone_id, gender, body_zones(name)")
+    .eq("active", true);
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    id: row.zone_id,
+    name: row.body_zones?.name ?? "Zona desconocida",
+    gender: row.gender,
+  }));
 }

@@ -14,6 +14,7 @@ const template = {
   defaultSessions: 6,
   sessionPrice: 10000,
   bonoPrice: 60000,
+  vatRate: 0.1,
 };
 
 describe("buildPackageSalePayload — discount fields", () => {
@@ -26,6 +27,7 @@ describe("buildPackageSalePayload — discount fields", () => {
       discountAmount: 0,
       discountReason: null,
       discountedBy: null,
+      vatRate: 0.1,
     });
   });
 
@@ -68,6 +70,7 @@ describe("buildLooseSessionPayload — discount fields", () => {
     templateName: "Axilas",
     zoneName: "Axilas",
     sessionPrice: 15000,
+    vatRate: 0.1,
     amount: null,
   };
 
@@ -80,6 +83,7 @@ describe("buildLooseSessionPayload — discount fields", () => {
       discountAmount: 0,
       discountReason: null,
       discountedBy: null,
+      vatRate: 0.1,
     });
   });
 
@@ -95,5 +99,35 @@ describe("buildLooseSessionPayload — discount fields", () => {
       discountReason: "Promo",
       discountedBy: "staff-9",
     });
+  });
+});
+
+describe("buildPackageSalePayload — vatRate", () => {
+  it("uses the template's vatRate for a catalog sale", () => {
+    const payload = buildPackageSalePayload({ source: "template", template });
+    expect(payload.vatRate).toBe(0.1);
+  });
+
+  it("uses the request's vatRate for an ad-hoc (custom) sale", () => {
+    const payload = buildPackageSalePayload({
+      source: "custom",
+      zoneId: "zone-2",
+      zoneName: "Piernas",
+      sessionCount: 4,
+      price: 90000,
+      vatRate: 0.05,
+    });
+    expect(payload.vatRate).toBe(0.05);
+  });
+
+  it("falls back to DEFAULT_VAT_RATE for an ad-hoc sale with no vatRate given", () => {
+    const payload = buildPackageSalePayload({
+      source: "custom",
+      zoneId: "zone-2",
+      zoneName: "Piernas",
+      sessionCount: 4,
+      price: 90000,
+    });
+    expect(payload.vatRate).toBe(0.21);
   });
 });

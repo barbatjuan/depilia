@@ -30,6 +30,7 @@ const base = {
   sessionPrice: 6,
   bonoPrice: 30,
   defaultSessions: 6,
+  vatRate: 0.21,
 };
 
 describe.sequential("tarifas ABM data layer", () => {
@@ -111,11 +112,13 @@ describe.sequential("tarifas ABM data layer", () => {
       sizeCategory: "grande",
       sessionPrice: 40,
       bonoPrice: 210,
+      vatRate: 0.105,
     });
     expect(updated).toMatchObject({
       sizeCategory: "grande",
       sessionPrice: 40,
       bonoPrice: 210,
+      vatRate: 0.105,
       gender: "mujer",
     });
   });

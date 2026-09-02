@@ -25,6 +25,7 @@ function saleDiscountColumns(payload: {
   discountedBy?: string | null;
   discountCodeId?: string | null;
   promotionId?: string | null;
+  vatRate: number;
 }) {
   return {
     total: payload.total ?? payload.price,
@@ -34,6 +35,7 @@ function saleDiscountColumns(payload: {
     discounted_by: payload.discountedBy ?? null,
     discount_code_id: payload.discountCodeId ?? null,
     promotion_id: payload.promotionId ?? null,
+    vat_rate: payload.vatRate,
   };
 }
 

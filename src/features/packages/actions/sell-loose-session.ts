@@ -69,6 +69,7 @@ export async function sellLooseSessionAction(
         templateName: template.name,
         zoneName: template.zoneName,
         sessionPrice: template.sessionPrice,
+        vatRate: template.vatRate,
         amount: parsed.data.amount,
       },
       discount,

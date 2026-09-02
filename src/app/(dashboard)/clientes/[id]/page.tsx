@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Mail, Pencil, Phone } from "lucide-react";
+import {
+  Calendar,
+  CalendarClock,
+  Mail,
+  Pencil,
+  Phone,
+  TrendingUp,
+  Users,
+  XCircle,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { getMoneyFormat } from "@/features/settings/data/money-format";
@@ -8,8 +17,14 @@ import { getClient } from "@/features/clients/data/clients";
 import {
   getClientAppointments,
   getClientPackages,
+  getClientPayments,
 } from "@/features/clients/data/client-ficha";
 import { summarizeClientPackages } from "@/features/clients/domain/client-packages";
+import {
+  buildClientTimeline,
+  summarizeClientHistory,
+} from "@/features/clients/domain/client-history";
+import { KpiCard } from "@/components/kpi-card";
 import {
   listActiveBodyZones,
   listActivePackageTemplates,
@@ -35,6 +50,12 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+const TIMELINE_TYPE_LABEL: Record<string, string> = {
+  sale: "Venta",
+  payment: "Pago",
+  appointment: "Turno",
+};
 
 const APPOINTMENT_STATUS_LABEL: Record<string, string> = {
   scheduled: "Programado",
@@ -71,6 +92,7 @@ export default async function ClienteFichaPage({
     zones,
     promotions,
     sales,
+    payments,
     moneyFormat,
   ] = await Promise.all([
     getClientPackages(supabase, id),
@@ -79,20 +101,48 @@ export default async function ClienteFichaPage({
     listActiveBodyZones(supabase),
     listActiveBonusPromotions(supabase, businessDate),
     listSales(supabase, { clientId: id }),
+    getClientPayments(supabase, id),
     getMoneyFormat(supabase),
   ]);
   const packageSummaries = summarizeClientPackages(packages);
   const activePackages = packageSummaries.filter((p) => p.status === "active");
   const pastPackages = packageSummaries.filter((p) => p.status === "completed");
 
+  const history = summarizeClientHistory({
+    appointments: appointments.map((a) => ({
+      status: a.status,
+      scheduledAt: a.scheduledAt,
+      zoneName: a.zoneName,
+    })),
+    sales: sales.map((s) => ({ total: s.balance.total, soldAt: s.soldAt })),
+    payments,
+    packages: packageSummaries.map((p) => ({ remaining: p.remaining })),
+  });
+  const timeline = buildClientTimeline({
+    sales: sales.map((s) => ({
+      description: s.description,
+      total: s.balance.total,
+      soldAt: s.soldAt,
+    })),
+    payments,
+    appointments: appointments.map((a) => ({
+      zoneName: a.zoneName,
+      scheduledAt: a.scheduledAt,
+      status: a.status,
+    })),
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
             {client.firstName} {client.lastName}
           </h1>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {client.gender ? (
+              <span className="capitalize">{client.gender}</span>
+            ) : null}
             {client.phone ? (
               <span className="flex items-center gap-1.5">
                 <Phone className="size-3.5" /> {client.phone}
@@ -106,13 +156,24 @@ export default async function ClienteFichaPage({
             {!client.phone && !client.email ? "Sin datos de contacto" : null}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PackageSaleActions
             clientId={id}
             templates={packageTemplates}
             zones={zones}
             promotions={promotions}
           />
+          {client.phone ? (
+            <Button variant="outline" asChild>
+              <a
+                href={`https://wa.me/${client.phone.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp
+              </a>
+            </Button>
+          ) : null}
           <Button variant="outline" asChild>
             <Link href={`/clientes/${id}/editar`}>
               <Pencil className="size-4" />
@@ -121,6 +182,47 @@ export default async function ClienteFichaPage({
           </Button>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard
+          label="Última visita"
+          value={history.lastVisit ? dateFormatter.format(new Date(history.lastVisit)) : "—"}
+          icon={Calendar}
+        />
+        <KpiCard
+          label="Próxima visita"
+          value={history.nextVisit ? dateFormatter.format(new Date(history.nextVisit)) : "—"}
+          icon={CalendarClock}
+        />
+        <KpiCard
+          label="Total gastado"
+          value={formatMoney(history.totalSpent, moneyFormat)}
+          icon={TrendingUp}
+          hint={`${history.visitCount} visitas · ticket medio ${formatMoney(history.averageTicket, moneyFormat)}`}
+        />
+        <KpiCard
+          label="Canceladas / ausentes"
+          value={`${history.cancelledCount} / ${history.noShowCount}`}
+          icon={XCircle}
+          tone={history.noShowCount > 0 ? "warning" : "default"}
+        />
+      </div>
+
+      {history.favouriteZones.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Users className="size-3.5" /> Zonas favoritas:
+          </span>
+          {history.favouriteZones.map((zone) => (
+            <span
+              key={zone.zone}
+              className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium"
+            >
+              {zone.zone} · {zone.count}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {client.notes ? (
         <Card>
@@ -254,6 +356,40 @@ export default async function ClienteFichaPage({
                   <Badge variant={APPOINTMENT_STATUS_VARIANT[appt.status] ?? "outline"}>
                     {APPOINTMENT_STATUS_LABEL[appt.status] ?? appt.status}
                   </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Timeline</CardTitle>
+          <CardDescription>Ventas, pagos y turnos, en orden cronológico</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {timeline.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin actividad todavía.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {timeline.map((entry, i) => (
+                <li
+                  key={`${entry.type}-${entry.at}-${i}`}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
+                  <div>
+                    <p className="font-medium">{entry.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {dateFormatter.format(new Date(entry.at))} ·{" "}
+                      {TIMELINE_TYPE_LABEL[entry.type]}
+                    </p>
+                  </div>
+                  {entry.amount !== undefined ? (
+                    <span className="tnum text-sm font-medium">
+                      {formatMoney(entry.amount, moneyFormat)}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>

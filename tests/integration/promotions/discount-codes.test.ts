@@ -237,6 +237,7 @@ describe.sequential("discount code at checkout — usage increments + void decre
         templateName: "Sesión",
         zoneName: "Axilas",
         sessionPrice: 20,
+        vatRate: 0.21,
         amount: null,
       },
       {
@@ -291,6 +292,7 @@ describe.sequential("discount code at checkout — usage increments + void decre
           templateName: "Sesión",
           zoneName: "Axilas",
           sessionPrice: 20,
+          vatRate: 0.21,
           amount: null,
         },
         {

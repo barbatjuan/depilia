@@ -15,11 +15,12 @@ export type TariffRow = {
   defaultSessions: number;
   sessionPrice: number;
   bonoPrice: number;
+  vatRate: number;
   active: boolean;
 };
 
 const SELECT =
-  "id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, active, body_zones(name)";
+  "id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, vat_rate, active, body_zones(name)";
 
 type RawTariff = {
   id: string;
@@ -30,6 +31,7 @@ type RawTariff = {
   default_sessions: number;
   session_price: number;
   bono_price: number;
+  vat_rate: number;
   active: boolean;
   body_zones: { name: string } | null;
 };
@@ -45,6 +47,7 @@ function toRow(row: RawTariff): TariffRow {
     defaultSessions: row.default_sessions,
     sessionPrice: row.session_price,
     bonoPrice: row.bono_price,
+    vatRate: row.vat_rate,
     active: row.active,
   };
 }
@@ -136,6 +139,7 @@ export async function createTariff(
       default_sessions: input.defaultSessions,
       session_price: input.sessionPrice,
       bono_price: input.bonoPrice,
+      vat_rate: input.vatRate,
       active: true,
     })
     .select(SELECT)
@@ -155,6 +159,7 @@ export async function updateTariff(
       size_category: input.sizeCategory,
       session_price: input.sessionPrice,
       bono_price: input.bonoPrice,
+      vat_rate: input.vatRate,
     })
     .eq("id", id)
     .select(SELECT)

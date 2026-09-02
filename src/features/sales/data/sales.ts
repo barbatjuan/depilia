@@ -103,6 +103,7 @@ export type SaleDetail = {
   balance: SaleBalance;
   discount: SaleDiscountInfo;
   payments: SalePaymentRow[];
+  vatRate: number;
 };
 
 /**
@@ -117,7 +118,7 @@ export async function getSale(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, client_id, description, total, list_total, discount_amount, discount_reason, sold_at, status, clients(first_name, last_name), promotions(name), discount_codes(code), payments(id, amount, paid_at, method, note)",
+      "id, client_id, description, total, list_total, discount_amount, discount_reason, vat_rate, sold_at, status, clients(first_name, last_name), promotions(name), discount_codes(code), payments(id, amount, paid_at, method, note)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -147,5 +148,6 @@ export async function getSale(
     balance: deriveSaleBalance(data.total, data.payments ?? []),
     discount: toDiscountInfo(data as unknown as RawDiscountShape),
     payments,
+    vatRate: data.vat_rate,
   };
 }

@@ -48,6 +48,7 @@ describe.sequential("sell-package data layer", () => {
         defaultSessions: template.default_sessions,
         sessionPrice: template.session_price,
         bonoPrice: template.bono_price,
+        vatRate: template.vat_rate,
       },
     });
 
@@ -100,6 +101,7 @@ describe.sequential("sell-package data layer", () => {
         templateId: null,
         description: `Sesión suelta — ${zone.name}`,
         price: 15000,
+        vatRate: 0.21,
       },
     });
 

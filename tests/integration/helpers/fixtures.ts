@@ -115,6 +115,7 @@ export async function seedPackageTemplate(
     default_sessions: number;
     session_price?: number;
     bono_price: number;
+    vat_rate?: number;
   },
 ) {
   const { data, error } = await db
@@ -128,6 +129,7 @@ export async function seedPackageTemplate(
       session_price:
         params.session_price ?? Math.round((params.bono_price / 6) * 100) / 100,
       bono_price: params.bono_price,
+      ...(params.vat_rate !== undefined ? { vat_rate: params.vat_rate } : {}),
     })
     .select()
     .single();

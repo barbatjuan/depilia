@@ -47,6 +47,8 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     await page.goto("/clientes/nuevo");
     await page.getByLabel("Nombre").fill(firstName);
     await page.getByLabel("Apellido").fill(lastName);
+    await page.getByLabel("Sexo").click();
+    await page.getByRole("option", { name: "Mujer", exact: true }).click();
     await page.getByLabel("Teléfono").fill("+54 9 11 5555-0000");
     await page.getByRole("button", { name: "Crear cliente" }).click();
 
@@ -89,15 +91,20 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
       .getByRole("option", { name: fullClientName, exact: true })
       .click();
 
+    // The client's recorded sex ("mujer") drives the zone filter — no
+    // separate "Sexo" step for a client that already has one on file.
     await bookDialog.getByRole("combobox", { name: "Zona" }).click();
     await page
       .getByRole("option", { name: E2E_PACKAGE_TEMPLATE_ZONE, exact: true })
       .click();
 
-    const { dateParam, hour, minute } = pickTodaySlot();
-    await page
-      .locator("#bookDateTime")
-      .fill(`${dateParam}T${pad(hour)}:${pad(minute)}`);
+    const { dateParam } = pickTodaySlot();
+    await page.locator("#bookDate").fill(dateParam);
+    await bookDialog.getByRole("combobox", { name: "Hora" }).click();
+    // Pick whichever slot the picker actually offers — it now filters out
+    // times taken by other turnos that same day, so a pre-computed random
+    // guess could land on an occupied slot and never appear as an option.
+    await page.getByRole("option").first().click();
 
     await bookDialog.getByRole("combobox", { name: "Sesión" }).click();
     await page
@@ -158,6 +165,20 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
     ).toBeVisible();
   });
 
+  await test.step("verify the ficha's stats and timeline reflect the visit, sale and payment", async () => {
+    await page.goto(`/clientes/${clientId}`);
+
+    await expect(page.getByText(/1 visitas/)).toBeVisible();
+    await expect(
+      page.getByText(formatMoney(saleAmountPaid), { exact: true }).first(),
+    ).toBeVisible();
+
+    const timelineCard = page.locator('[data-slot="card"]', {
+      hasText: "Timeline",
+    });
+    await expect(timelineCard.locator("li")).toHaveCount(3);
+  });
+
   await test.step("create an expense", async () => {
     await page.goto("/gastos/nuevo");
     await page.getByRole("combobox", { name: "Categoría" }).click();
@@ -191,29 +212,11 @@ test("golden path: client -> package -> appointment -> completion -> payment -> 
   });
 });
 
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-/**
- * Picks a random hour:minute slot inside the agenda's visible 08:00-20:00
- * grid, on today's Buenos Aires calendar date, leaving room for the
- * default 30-minute appointment duration. Randomized (not fixed) so
- * repeated local runs on the same day don't collide with a leftover
- * `scheduled` appointment from a previous run and trip the single-chair
- * overlap constraint.
- */
-function pickTodaySlot(): { dateParam: string; hour: number; minute: number } {
-  const now = new Date();
-  const dateParam = formatInTimeZone(now, CLINIC_TZ, "yyyy-MM-dd");
-  const startMinutes = 8 * 60;
-  const endMinutes = 20 * 60 - 30; // leave room for a 30-minute appointment
-  const slotMinutes =
-    startMinutes + Math.floor(Math.random() * (endMinutes - startMinutes));
+/** Today's Buenos Aires calendar date, for the booking/expense date fields. */
+function pickTodaySlot(): { dateParam: string } {
+  const dateParam = formatInTimeZone(new Date(), CLINIC_TZ, "yyyy-MM-dd");
   return {
     dateParam,
-    hour: Math.floor(slotMinutes / 60),
-    minute: slotMinutes % 60,
   };
 }
 

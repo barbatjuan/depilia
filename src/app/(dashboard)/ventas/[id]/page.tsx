@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { getMoneyFormat } from "@/features/settings/data/money-format";
 import { getSale } from "@/features/sales/data/sales";
+import { splitVat } from "@/features/accounting/domain/vat";
+import { currencyFractionDigits } from "@/features/promotions/domain/discount";
 import { registerPaymentAction } from "@/features/sales/actions/register-payment";
 import { RegisterPaymentForm } from "@/features/sales/components/register-payment-form";
 import { SaleStatusBadge } from "@/features/sales/components/sale-status-badge";
@@ -43,6 +45,11 @@ export default async function SaleDetailPage({
   ]);
   if (!sale) notFound();
   const currencyFormat = (n: number) => formatMoney(n, moneyFormat);
+  const vatSplit = splitVat(
+    sale.balance.total,
+    sale.vatRate,
+    currencyFractionDigits(moneyFormat.currency),
+  );
 
   const boundRegisterPayment = registerPaymentAction.bind(null, sale.id);
 
@@ -137,6 +144,31 @@ export default async function SaleDetailPage({
                 {currencyFormat(sale.balance.balance)}
               </p>
             </div>
+            {sale.vatRate === 0 ? (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">IVA</p>
+                <p className="text-lg font-semibold">Exento de IVA</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase">
+                    Base imponible
+                  </p>
+                  <p className="text-lg font-semibold">
+                    {currencyFormat(vatSplit.net)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase">
+                    IVA ({Math.round(sale.vatRate * 1000) / 10}%)
+                  </p>
+                  <p className="text-lg font-semibold">
+                    {currencyFormat(vatSplit.vat)}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

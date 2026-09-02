@@ -14,6 +14,7 @@ const tariff: PackageTemplateOption = {
   defaultSessions: 6,
   sessionPrice: 10000,
   bonoPrice: 60000,
+  vatRate: 0.1,
 };
 
 function promoReq(overridePrice: number | null) {
@@ -39,6 +40,7 @@ describe("buildPackageSalePayload — promotion source", () => {
       listTotal: 60000,
       total: 60000,
       discountAmount: 0,
+      vatRate: 0.1,
     });
     expect(payload.description).toContain("6+2 gratis");
     expect(payload.description).toContain("6+2 sesiones");

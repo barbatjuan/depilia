@@ -20,6 +20,7 @@ function tariff(
     defaultSessions: 6,
     sessionPrice: 10,
     bonoPrice: 48,
+    vatRate: 0.21,
     ...o,
   };
 }

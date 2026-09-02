@@ -9,6 +9,7 @@ import { listActivePackageTemplates } from "@/features/packages/data/package-tem
 import { listActiveBonusPromotions } from "@/features/promotions/data/promotions";
 import { sellPackage } from "@/features/packages/data/sell-package";
 import { resolveDiscountInput } from "@/features/packages/data/sale-discount";
+import { getDefaultVatRate } from "@/features/settings/data/vat";
 import { mapDiscountError } from "@/features/promotions/domain/discount-errors";
 import { PROMOTION_UNAVAILABLE_MESSAGE } from "@/features/promotions/domain/promotion-errors";
 import { CLINIC_TZ } from "@/features/dashboard/domain/schedule";
@@ -100,6 +101,7 @@ export async function sellPackageAction(
       const zoneId = parsed.data.zoneId as string;
       const zoneName =
         formData.get("zoneName")?.toString() || "Zona seleccionada";
+      const vatRate = await getDefaultVatRate(supabase);
       payload = buildPackageSalePayload(
         {
           source: "custom",
@@ -107,6 +109,7 @@ export async function sellPackageAction(
           zoneName,
           sessionCount: Number(parsed.data.sessionCount),
           price: Number(parsed.data.price),
+          vatRate,
         },
         discount,
       );

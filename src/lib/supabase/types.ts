@@ -38,6 +38,7 @@ export type Database = {
         Row: {
           client_id: string
           client_package_id: string | null
+          confirmed_at: string | null
           consumed_at: string | null
           created_at: string
           duration_minutes: number
@@ -51,6 +52,7 @@ export type Database = {
         Insert: {
           client_id: string
           client_package_id?: string | null
+          confirmed_at?: string | null
           consumed_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -64,6 +66,7 @@ export type Database = {
         Update: {
           client_id?: string
           client_package_id?: string | null
+          confirmed_at?: string | null
           consumed_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -296,6 +299,7 @@ export type Database = {
           created_at: string
           email: string | null
           first_name: string
+          gender: string | null
           id: string
           last_name: string
           notes: string | null
@@ -306,6 +310,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           first_name: string
+          gender?: string | null
           id?: string
           last_name: string
           notes?: string | null
@@ -316,6 +321,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           first_name?: string
+          gender?: string | null
           id?: string
           last_name?: string
           notes?: string | null
@@ -327,6 +333,7 @@ export type Database = {
         Row: {
           clinic_name: string | null
           currency: string
+          default_vat_rate: number
           id: boolean
           locale: string
           reminder_hours: number
@@ -335,6 +342,7 @@ export type Database = {
         Insert: {
           clinic_name?: string | null
           currency?: string
+          default_vat_rate?: number
           id?: boolean
           locale?: string
           reminder_hours?: number
@@ -343,6 +351,7 @@ export type Database = {
         Update: {
           clinic_name?: string | null
           currency?: string
+          default_vat_rate?: number
           id?: boolean
           locale?: string
           reminder_hours?: number
@@ -455,6 +464,7 @@ export type Database = {
           name: string
           session_price: number
           size_category: string
+          vat_rate: number
           zone_id: string
         }
         Insert: {
@@ -466,6 +476,7 @@ export type Database = {
           name: string
           session_price: number
           size_category: string
+          vat_rate?: number
           zone_id: string
         }
         Update: {
@@ -477,6 +488,7 @@ export type Database = {
           name?: string
           session_price?: number
           size_category?: string
+          vat_rate?: number
           zone_id?: string
         }
         Relationships: [
@@ -704,6 +716,7 @@ export type Database = {
           sold_at: string
           status: string
           total: number
+          vat_rate: number
         }
         Insert: {
           appointment_id?: string | null
@@ -720,6 +733,7 @@ export type Database = {
           sold_at?: string
           status?: string
           total: number
+          vat_rate?: number
         }
         Update: {
           appointment_id?: string | null
@@ -736,6 +750,7 @@ export type Database = {
           sold_at?: string
           status?: string
           total?: number
+          vat_rate?: number
         }
         Relationships: [
           {
@@ -895,6 +910,7 @@ export type Database = {
           p_lines?: Json
           p_list_total: number
           p_promotion_id: string
+          p_vat_rate?: number
         }
         Returns: string
       }
@@ -905,6 +921,7 @@ export type Database = {
         Returns: {
           client_id: string
           client_package_id: string | null
+          confirmed_at: string | null
           consumed_at: string | null
           created_at: string
           duration_minutes: number

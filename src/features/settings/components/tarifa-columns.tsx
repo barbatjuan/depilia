@@ -23,6 +23,14 @@ export const tarifaColumns: ColumnDef<TariffRow>[] = [
     cell: ({ row }) => <MoneyCell amount={row.original.bonoPrice} />,
   },
   {
+    id: "vatRate",
+    header: "IVA",
+    cell: ({ row }) =>
+      row.original.vatRate === 0
+        ? "Exento"
+        : `${Math.round(row.original.vatRate * 1000) / 10}%`,
+  },
+  {
     id: "status",
     header: "Estado",
     cell: ({ row }) =>

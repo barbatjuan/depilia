@@ -18,6 +18,7 @@ export async function updateTarifaAction(
     sizeCategory: formData.get("sizeCategory"),
     sessionPrice: formData.get("sessionPrice"),
     bonoPrice: formData.get("bonoPrice"),
+    vatPercent: formData.get("vatPercent"),
   });
 
   if (!parsed.success) {

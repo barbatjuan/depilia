@@ -26,6 +26,7 @@ type RawItem = {
     default_sessions: number;
     session_price: number;
     bono_price: number;
+    vat_rate: number;
     active: boolean;
     body_zones: { name: string } | null;
   } | null;
@@ -53,7 +54,7 @@ export async function listActiveBonusPromotions(
   const { data, error } = await supabase
     .from("promotions")
     .select(
-      "id, name, valid_from, valid_to, promotion_items(bonus_sessions, override_price, package_templates(id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, active, body_zones(name)))",
+      "id, name, valid_from, valid_to, promotion_items(bonus_sessions, override_price, package_templates(id, zone_id, name, gender, size_category, default_sessions, session_price, bono_price, vat_rate, active, body_zones(name)))",
     )
     .eq("kind", "bonus")
     .eq("active", true)
@@ -87,6 +88,7 @@ export async function listActiveBonusPromotions(
         defaultSessions: t.default_sessions,
         sessionPrice: t.session_price,
         bonoPrice: t.bono_price,
+        vatRate: t.vat_rate,
       },
     });
   }

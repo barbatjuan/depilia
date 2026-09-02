@@ -50,6 +50,7 @@ describe.sequential("per-sale manual discount — persistence + non-ripple", () 
         defaultSessions: 6,
         sessionPrice: 10000,
         bonoPrice: 60000,
+        vatRate: 0.21,
       },
     };
   }
@@ -125,6 +126,7 @@ describe.sequential("per-sale manual discount — persistence + non-ripple", () 
         templateName: "Axilas x6",
         zoneName: f.zone.name,
         sessionPrice: 20000,
+        vatRate: 0.21,
         amount: null,
       },
       { kind: "fixed", value: 5000, reason: "Promo", by: f.staff.id, fractionDigits: 2 },

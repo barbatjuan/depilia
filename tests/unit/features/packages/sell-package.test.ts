@@ -15,6 +15,7 @@ describe("buildPackageSalePayload", () => {
         defaultSessions: 6,
         sessionPrice: 10000,
         bonoPrice: 60000,
+        vatRate: 0.21,
       },
     });
 
@@ -24,6 +25,7 @@ describe("buildPackageSalePayload", () => {
       totalSessions: 6,
       price: 60000,
       description: "Paquete Axilas x6 — 6 sesiones (Axilas)",
+      vatRate: 0.21,
     });
   });
 
@@ -82,6 +84,7 @@ describe("buildPackageSalePayload", () => {
         defaultSessions: 6,
         sessionPrice: 10,
         bonoPrice: 48,
+        vatRate: 0.21,
       },
     });
 

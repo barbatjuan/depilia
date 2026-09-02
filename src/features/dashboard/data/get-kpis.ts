@@ -1,33 +1,12 @@
-import { toZonedTime } from "date-fns-tz";
 import type { AppSupabaseClient } from "@/lib/supabase/app-client";
 import {
   buildDashboardKpis,
   type DashboardKpis,
 } from "@/features/dashboard/domain/kpis";
+import { getClinicDayBounds } from "@/features/dashboard/domain/schedule";
+import { monthKey, monthRange } from "@/features/accounting/domain/period";
 
-const CLINIC_TZ = "America/Argentina/Buenos_Aires";
 const LOW_SESSION_THRESHOLD = 1;
-
-function dayRangeUtc(date: Date) {
-  const zoned = toZonedTime(date, CLINIC_TZ);
-  const y = zoned.getFullYear();
-  const m = zoned.getMonth();
-  const d = zoned.getDate();
-  return {
-    start: new Date(Date.UTC(y, m, d)).toISOString(),
-    end: new Date(Date.UTC(y, m, d + 1)).toISOString(),
-  };
-}
-
-function monthRangeUtc(date: Date) {
-  const zoned = toZonedTime(date, CLINIC_TZ);
-  const y = zoned.getFullYear();
-  const m = zoned.getMonth();
-  return {
-    start: new Date(Date.UTC(y, m, 1)).toISOString(),
-    end: new Date(Date.UTC(y, m + 1, 1)).toISOString(),
-  };
-}
 
 /**
  * Fetches the raw counts/rows the dashboard needs and hands them to the
@@ -38,8 +17,12 @@ export async function getDashboardKpis(
   supabase: AppSupabaseClient,
   now = new Date(),
 ): Promise<DashboardKpis> {
-  const today = dayRangeUtc(now);
-  const month = monthRangeUtc(now);
+  const dayBounds = getClinicDayBounds(now);
+  const today = {
+    start: dayBounds.start.toISOString(),
+    end: dayBounds.end.toISOString(),
+  };
+  const month = monthRange(monthKey(now));
   const upcoming7DaysEnd = new Date(
     now.getTime() + 7 * 24 * 60 * 60 * 1000,
   ).toISOString();
@@ -60,8 +43,8 @@ export async function getDashboardKpis(
     supabase
       .from("payments")
       .select("amount")
-      .gte("paid_at", month.start)
-      .lt("paid_at", month.end),
+      .gte("paid_at", month.startUtc)
+      .lt("paid_at", month.endUtc),
     supabase
       .from("clients")
       .select("id", { count: "exact", head: true })

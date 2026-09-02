@@ -4,6 +4,7 @@ import {
   bonusSessions,
   type DiscountKind,
 } from "@/features/promotions/domain/discount";
+import { DEFAULT_VAT_RATE } from "@/features/accounting/domain/vat";
 
 export type Gender = "mujer" | "hombre";
 
@@ -94,6 +95,7 @@ export type PackageTemplateOption = {
   defaultSessions: number;
   sessionPrice: number;
   bonoPrice: number;
+  vatRate: number;
 };
 
 export type PackageSaleRequest =
@@ -104,6 +106,7 @@ export type PackageSaleRequest =
       zoneName: string;
       sessionCount: number;
       price: number;
+      vatRate?: number;
     }
   | {
       source: "promotion";
@@ -127,6 +130,7 @@ export type PackageSalePayload = {
   discountedBy?: string | null;
   discountCodeId?: string | null;
   promotionId?: string | null;
+  vatRate: number;
 };
 
 /**
@@ -149,6 +153,7 @@ export function buildPackageSalePayload(
         totalSessions: template.defaultSessions,
         price: template.bonoPrice,
         description: `Paquete ${template.name} — ${template.defaultSessions} sesiones (${template.zoneName})`,
+        vatRate: template.vatRate,
       },
       discount,
     );
@@ -168,6 +173,7 @@ export function buildPackageSalePayload(
         price: bonusPrice(tariff.bonoPrice, request.overridePrice),
         description: `Promo ${request.promotionName} — ${tariff.defaultSessions}+${request.bonusSessions} sesiones (${tariff.zoneName})`,
         promotionId: request.promotionId,
+        vatRate: tariff.vatRate,
       },
       discount,
     );
@@ -189,6 +195,7 @@ export function buildPackageSalePayload(
       totalSessions: request.sessionCount,
       price: request.price,
       description: `Paquete a medida — ${request.sessionCount} sesiones (${request.zoneName})`,
+      vatRate: request.vatRate ?? DEFAULT_VAT_RATE,
     },
     discount,
   );
@@ -216,6 +223,7 @@ export type LooseSessionRequest = {
   templateName: string;
   zoneName: string;
   sessionPrice: number;
+  vatRate: number;
   amount?: number | null;
 };
 
@@ -229,6 +237,7 @@ export type LooseSessionPayload = {
   discountReason?: string | null;
   discountedBy?: string | null;
   discountCodeId?: string | null;
+  vatRate: number;
 };
 
 /**
@@ -263,5 +272,6 @@ export function buildLooseSessionPayload(
     discountReason: d.discountReason,
     discountedBy: d.discountedBy,
     discountCodeId: d.discountCodeId,
+    vatRate: request.vatRate,
   };
 }

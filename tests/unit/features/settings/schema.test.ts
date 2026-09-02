@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { tariffSchema, tariffUpdateSchema } from "@/features/settings/schema";
+import {
+  TARIFA_VAT_DEFAULT,
+  tariffSchema,
+  tariffUpdateSchema,
+} from "@/features/settings/schema";
 
 const validCreate = {
   zoneName: "Pómulos",
@@ -45,20 +49,52 @@ describe("tariffSchema (create)", () => {
       tariffSchema.safeParse({ ...validCreate, sizeCategory: "enorme" }).success,
     ).toBe(false);
   });
+
+  it("defaults vatRate to 0.21 (21%) when vatPercent is omitted", () => {
+    const parsed = tariffSchema.parse(validCreate);
+    expect(parsed.vatRate).toBe(TARIFA_VAT_DEFAULT);
+  });
+
+  it("transforms vatPercent into a vatRate fraction", () => {
+    expect(tariffSchema.parse({ ...validCreate, vatPercent: "0" }).vatRate).toBe(0);
+    expect(
+      tariffSchema.parse({ ...validCreate, vatPercent: "10.5" }).vatRate,
+    ).toBe(0.105);
+  });
+
+  it("rejects a vatPercent outside [0, 99.9]", () => {
+    expect(
+      tariffSchema.safeParse({ ...validCreate, vatPercent: "100" }).success,
+    ).toBe(false);
+    expect(
+      tariffSchema.safeParse({ ...validCreate, vatPercent: "-1" }).success,
+    ).toBe(false);
+  });
 });
 
 describe("tariffUpdateSchema (edit)", () => {
-  it("accepts size + prices only", () => {
+  it("accepts size + prices + vat", () => {
     const parsed = tariffUpdateSchema.parse({
       sizeCategory: "grande",
       sessionPrice: "40",
       bonoPrice: "210",
+      vatPercent: "10.5",
     });
     expect(parsed).toEqual({
       sizeCategory: "grande",
       sessionPrice: 40,
       bonoPrice: 210,
+      vatRate: 0.105,
     });
+  });
+
+  it("defaults vatRate to 0.21 when vatPercent is omitted", () => {
+    const parsed = tariffUpdateSchema.parse({
+      sizeCategory: "grande",
+      sessionPrice: "40",
+      bonoPrice: "210",
+    });
+    expect(parsed.vatRate).toBe(TARIFA_VAT_DEFAULT);
   });
 
   it("rejects a non-positive price", () => {

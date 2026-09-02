@@ -69,11 +69,12 @@ async function main() {
   //    tariff areas: the 5 English demo zones from 0010 are archived by
   //    migration 0012.
   const serviceSpecs = [
-    { name: "Piernas completas", gender: "mujer", size_category: "grande", session_price: 40, bono_price: 210, default_sessions: 6 },
-    { name: "Axilas", gender: "mujer", size_category: "pequena", session_price: 10, bono_price: 48, default_sessions: 6 },
-    { name: "Facial Completo", gender: "mujer", size_category: "mediana", session_price: 15, bono_price: 78, default_sessions: 6 },
-    { name: "Muslos", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6 },
-    { name: "Media espalda", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6 },
+    { name: "Piernas completas", gender: "mujer", size_category: "grande", session_price: 40, bono_price: 210, default_sessions: 6, vat_rate: 0.21 },
+    { name: "Axilas", gender: "mujer", size_category: "pequena", session_price: 10, bono_price: 48, default_sessions: 6, vat_rate: 0.21 },
+    // Exempt on purpose — demo variety so the IVA breakdown shows more than one rate.
+    { name: "Facial Completo", gender: "mujer", size_category: "mediana", session_price: 15, bono_price: 78, default_sessions: 6, vat_rate: 0 },
+    { name: "Muslos", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21 },
+    { name: "Media espalda", gender: "mujer", size_category: "mediana", session_price: 25, bono_price: 120, default_sessions: 6, vat_rate: 0.21 },
   ];
   for (const s of serviceSpecs) {
     await db.from("body_zones").upsert({ name: s.name }, { onConflict: "name" });
@@ -89,7 +90,7 @@ async function main() {
   for (const s of serviceSpecs) {
     const { data: existing } = await db
       .from("package_templates")
-      .select("id, name, default_sessions, bono_price")
+      .select("id, name, default_sessions, bono_price, vat_rate")
       .eq("name", s.name)
       .eq("gender", s.gender)
       .maybeSingle();
@@ -107,9 +108,10 @@ async function main() {
         default_sessions: s.default_sessions,
         session_price: s.session_price,
         bono_price: s.bono_price,
+        vat_rate: s.vat_rate,
         active: true,
       })
-      .select("id, name, default_sessions, bono_price")
+      .select("id, name, default_sessions, bono_price, vat_rate")
       .single();
     die(`insert template ${s.name}`, error);
     templates.push(data);
@@ -127,9 +129,12 @@ async function main() {
     "Gómez", "Sánchez", "Romero", "Díaz", "Álvarez", "Torres", "Ruiz",
     "Ramírez", "Flores", "Benítez", "Acosta", "Medina", "Herrera", "Suárez",
   ];
+  // Every demo first name above is unambiguously female, so `mujer` is the
+  // correct backfill here. A real import would classify per name.
   const clientRows = firstNames.map((first, i) => ({
     first_name: first,
     last_name: lastNames[i],
+    gender: "mujer",
     phone: `+54 9 11 ${rand(3000, 6999)}-${rand(1000, 9999)}`,
     email: Math.random() < 0.7
       ? `${first.toLowerCase()}.${lastNames[i].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")}@example.com`
@@ -175,158 +180,29 @@ async function main() {
 
   const packageByClient = new Map(packaged.map((p) => [p.client_id, p]));
 
-  // 6. Appointments: 5 per weekday of the current BA month.
+  // 6-8. Appointments + sales/payments + expenses, spread across the current
+  // BA month and the 2 months before it (PASO 8 — otherwise `/contabilidad`'s
+  // month picker and month-over-month deltas have nothing to compare against).
   const nowBa = new Date(Date.now() - 0); // "today" in wall terms is close enough
   const baNow = new Date(
     nowBa.getTime() - CLINIC_TZ_OFFSET_HOURS * 3600 * 1000,
   );
   const year = baNow.getUTCFullYear();
   const monthIndex = baNow.getUTCMonth();
-  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
   const todayDay = baNow.getUTCDate();
   const slotHours = [10, 11, 12, 13, 14];
-
-  const apptInserts = [];
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dow = new Date(Date.UTC(year, monthIndex, day)).getUTCDay();
-    if (dow === 0 || dow === 6) continue; // clinic closed weekends
-    for (const hour of slotHours) {
-      const client = pick(clients);
-      const pkg = packageByClient.get(client.id);
-      const isPast = day < todayDay;
-      let clientPackageId = null;
-      if (pkg && Math.random() < 0.5) {
-        // Only link (and later consume) if capacity allows for past appts.
-        if (!isPast || pkg.sessions_used < pkg.total_sessions - 1) {
-          clientPackageId = pkg.packageId;
-          if (isPast) pkg.sessions_used++;
-        }
-      }
-      apptInserts.push({
-        client_id: client.id,
-        client_package_id: clientPackageId,
-        zone_id: pick(zones).id,
-        scheduled_at: baInstant(year, monthIndex, day, hour).toISOString(),
-        duration_minutes: 30,
-        status: "scheduled",
-        _isPast: isPast,
-      });
-    }
-  }
-
-  const { data: appts, error: apptErr } = await db
-    .from("appointments")
-    .insert(
-      apptInserts.map((row) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _isPast, ...rest } = row;
-        return rest;
-      }),
-    )
-    .select("id");
-  die("insert appointments", apptErr);
-  console.log(`• ${appts.length} appointments`);
-
-  // Mark past appointments completed one-by-one so the BEFORE UPDATE session
-  // ledger trigger fires (it does not fire on plain INSERT).
-  let completed = 0;
-  for (let i = 0; i < appts.length; i++) {
-    if (!apptInserts[i]._isPast) continue;
-    const roll = Math.random();
-    const status = roll < 0.85 ? "completed" : roll < 0.93 ? "no_show" : "cancelled";
-    const { error } = await db
-      .from("appointments")
-      .update({ status })
-      .eq("id", appts[i].id);
-    die(`complete appointment ${appts[i].id}`, error);
-    if (status === "completed") completed++;
-  }
-  console.log(`• ${completed} appointments completed (session ledger ran)`);
-
-  // 7. Sales + payments. One sale per packaged client (the package purchase),
-  //    plus a handful of ad-hoc loose-session sales.
   const methods = ["cash", "card", "transfer"];
-  let saleCount = 0;
-  let paymentCount = 0;
+  // Derived from serviceSpecs (single source of truth) instead of hardcoded
+  // — a separate hand-picked scale here drifted 100-600x above the real
+  // tariff catalog and made /contabilidad's totals nonsensical.
+  const looseServices = serviceSpecs.map((s) => [
+    `Sesión suelta ${s.name.toLowerCase()}`,
+    s.session_price,
+  ]);
 
-  for (const p of packaged) {
-    const total = Number(p.template.bono_price);
-    const soldDay = rand(1, Math.max(1, todayDay - 1));
-    const { data: sale, error: saleErr } = await db
-      .from("sales")
-      .insert({
-        client_id: p.client_id,
-        client_package_id: p.packageId,
-        description: `Paquete ${p.template.name} — ${p.template.default_sessions} sesiones`,
-        total,
-        sold_at: baInstant(year, monthIndex, soldDay, 12).toISOString(),
-        status: "open",
-      })
-      .select("id")
-      .single();
-    die("insert package sale", saleErr);
-    saleCount++;
+  // ~60% cash so the arqueo is not trivially all-cash.
+  const expenseMethod = () => (Math.random() < 0.6 ? "cash" : pick(["transfer", "card"]));
 
-    // 1-3 installments summing to 40-100% of total.
-    const coverage = pick([0.4, 0.6, 0.75, 1, 1]);
-    const target = round2(total * coverage);
-    const parts = rand(1, 3);
-    let remaining = target;
-    for (let k = 0; k < parts; k++) {
-      const amount =
-        k === parts - 1 ? remaining : round2(remaining / (parts - k) * (0.7 + Math.random() * 0.6));
-      const capped = Math.min(amount, remaining);
-      if (capped < 1) break;
-      remaining = round2(remaining - capped);
-      const payDay = Math.min(todayDay, soldDay + k * rand(2, 6));
-      const { error } = await db.from("payments").insert({
-        sale_id: sale.id,
-        amount: capped,
-        paid_at: baInstant(year, monthIndex, payDay, rand(10, 18)).toISOString(),
-        method: pick(methods),
-      });
-      die("insert payment", error);
-      paymentCount++;
-    }
-  }
-
-  // Ad-hoc loose sales, fully paid, spread through the month (incl. today).
-  const looseServices = [
-    ["Sesión suelta axilas", 6000],
-    ["Sesión suelta bozo", 4500],
-    ["Sesión suelta piernas", 12000],
-    ["Sesión suelta rostro", 7000],
-    ["Sesión suelta bikini", 9000],
-  ];
-  for (let i = 0; i < 12; i++) {
-    const [desc, price] = pick(looseServices);
-    const client = pick(clients);
-    const day = i < 3 ? todayDay : rand(1, todayDay);
-    const { data: sale, error: saleErr } = await db
-      .from("sales")
-      .insert({
-        client_id: client.id,
-        description: desc,
-        total: price,
-        sold_at: baInstant(year, monthIndex, day, rand(10, 18)).toISOString(),
-        status: "open",
-      })
-      .select("id")
-      .single();
-    die("insert loose sale", saleErr);
-    saleCount++;
-    const { error } = await db.from("payments").insert({
-      sale_id: sale.id,
-      amount: price,
-      paid_at: baInstant(year, monthIndex, day, rand(10, 18)).toISOString(),
-      method: pick(methods),
-    });
-    die("insert loose payment", error);
-    paymentCount++;
-  }
-  console.log(`• ${saleCount} sales, ${paymentCount} payments`);
-
-  // 8. Expenses across the month, a few dated today.
   for (const name of ["Alquiler", "Insumos", "Servicios", "Marketing"]) {
     const { data: existing } = await db
       .from("expense_categories")
@@ -342,34 +218,192 @@ async function main() {
     .eq("archived", false);
   die("load expense_categories", catErr);
 
-  // ~60% cash so the arqueo is not trivially all-cash.
-  const expenseMethod = () => (Math.random() < 0.6 ? "cash" : pick(["transfer", "card"]));
+  let totalAppointments = 0;
+  let totalCompleted = 0;
+  let saleCount = 0;
+  let paymentCount = 0;
+  let totalExpenses = 0;
 
-  const expenseInserts = [];
-  for (let day = 1; day <= todayDay; day += rand(2, 4)) {
-    const cat = pick(categories);
-    expenseInserts.push({
-      category_id: cat.id,
-      amount: rand(8, 90) * 1000,
-      spent_on: `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-      description: `${cat.name} — gasto del ${day}/${monthIndex + 1}`,
-      method: expenseMethod(),
-    });
+  // Oldest month first: the packaged clients' bono purchase happens 2 months
+  // back, and their sessions get consumed across the following months.
+  for (let monthsAgo = 2; monthsAgo >= 0; monthsAgo--) {
+    let y = year;
+    let m = monthIndex - monthsAgo;
+    while (m < 0) {
+      m += 12;
+      y -= 1;
+    }
+    const isCurrentMonth = monthsAgo === 0;
+    const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const lastDay = isCurrentMonth ? todayDay : daysInMonth;
+
+    // Appointments: 5 slots per weekday, up through `lastDay`.
+    const apptInserts = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = new Date(Date.UTC(y, m, day)).getUTCDay();
+      if (dow === 0 || dow === 6) continue; // clinic closed weekends
+      if (day > lastDay) continue; // don't schedule beyond "today" in the current month
+      for (const hour of slotHours) {
+        const client = pick(clients);
+        const pkg = packageByClient.get(client.id);
+        const isPast = isCurrentMonth ? day < todayDay : true;
+        let clientPackageId = null;
+        if (pkg && Math.random() < 0.5) {
+          if (!isPast || pkg.sessions_used < pkg.total_sessions - 1) {
+            clientPackageId = pkg.packageId;
+            if (isPast) pkg.sessions_used++;
+          }
+        }
+        apptInserts.push({
+          client_id: client.id,
+          client_package_id: clientPackageId,
+          zone_id: pick(zones).id,
+          scheduled_at: baInstant(y, m, day, hour).toISOString(),
+          duration_minutes: 30,
+          status: "scheduled",
+          _isPast: isPast,
+        });
+      }
+    }
+
+    const { data: appts, error: apptErr } = await db
+      .from("appointments")
+      .insert(
+        apptInserts.map((row) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { _isPast, ...rest } = row;
+          return rest;
+        }),
+      )
+      .select("id");
+    die("insert appointments", apptErr);
+    totalAppointments += appts.length;
+
+    // Mark past appointments completed one-by-one so the BEFORE UPDATE
+    // session ledger trigger fires (it does not fire on plain INSERT).
+    for (let i = 0; i < appts.length; i++) {
+      if (!apptInserts[i]._isPast) continue;
+      const roll = Math.random();
+      const status = roll < 0.85 ? "completed" : roll < 0.93 ? "no_show" : "cancelled";
+      const { error } = await db
+        .from("appointments")
+        .update({ status })
+        .eq("id", appts[i].id);
+      die(`complete appointment ${appts[i].id}`, error);
+      if (status === "completed") totalCompleted++;
+    }
+
+    // The packaged clients' bono purchase happens once, in the oldest month.
+    if (monthsAgo === 2) {
+      for (const p of packaged) {
+        const total = Number(p.template.bono_price);
+        const soldDay = rand(1, Math.max(1, lastDay - 1 || 1));
+        const { data: sale, error: saleErr } = await db
+          .from("sales")
+          .insert({
+            client_id: p.client_id,
+            client_package_id: p.packageId,
+            description: `Paquete ${p.template.name} — ${p.template.default_sessions} sesiones`,
+            total,
+            vat_rate: p.template.vat_rate,
+            sold_at: baInstant(y, m, soldDay, 12).toISOString(),
+            status: "open",
+          })
+          .select("id")
+          .single();
+        die("insert package sale", saleErr);
+        saleCount++;
+
+        // 1-3 installments summing to 40-100% of total.
+        const coverage = pick([0.4, 0.6, 0.75, 1, 1]);
+        const target = round2(total * coverage);
+        const parts = rand(1, 3);
+        let remaining = target;
+        for (let k = 0; k < parts; k++) {
+          const amount =
+            k === parts - 1 ? remaining : round2(remaining / (parts - k) * (0.7 + Math.random() * 0.6));
+          const capped = Math.min(amount, remaining);
+          if (capped < 1) break;
+          remaining = round2(remaining - capped);
+          const payDay = Math.min(daysInMonth, soldDay + k * rand(2, 6));
+          const { error } = await db.from("payments").insert({
+            sale_id: sale.id,
+            amount: capped,
+            paid_at: baInstant(y, m, payDay, rand(10, 18)).toISOString(),
+            method: pick(methods),
+          });
+          die("insert payment", error);
+          paymentCount++;
+        }
+      }
+    }
+
+    // Ad-hoc loose sales, fully paid, spread through the month.
+    const looseCount = isCurrentMonth ? 6 : 4;
+    for (let i = 0; i < looseCount; i++) {
+      const [desc, price] = pick(looseServices);
+      const client = pick(clients);
+      const day = isCurrentMonth && i < 2 ? todayDay : rand(1, Math.max(1, lastDay));
+      const { data: sale, error: saleErr } = await db
+        .from("sales")
+        .insert({
+          client_id: client.id,
+          description: desc,
+          total: price,
+          sold_at: baInstant(y, m, day, rand(10, 18)).toISOString(),
+          status: "open",
+        })
+        .select("id")
+        .single();
+      die("insert loose sale", saleErr);
+      saleCount++;
+      const { error } = await db.from("payments").insert({
+        sale_id: sale.id,
+        amount: price,
+        paid_at: baInstant(y, m, day, rand(10, 18)).toISOString(),
+        method: pick(methods),
+      });
+      die("insert loose payment", error);
+      paymentCount++;
+    }
+
+    // Expenses across the month, one dated "today" for the current month.
+    // Today's expense is deliberately small and kept out of the periodic
+    // loop below (skip day === todayDay there) so the live caja theoretical
+    // balance (opening - retiros + cobros - gastos) always stays comfortably
+    // positive regardless of the random draws — a business paying out more
+    // cash than it took in on a single day is not a realistic demo default,
+    // and `caja.spec.ts` asserts the theoretical is positive before closing.
+    const expenseInserts = [];
+    for (let day = 1; day <= lastDay; day += rand(2, 4)) {
+      if (isCurrentMonth && day === todayDay) continue;
+      const cat = pick(categories);
+      expenseInserts.push({
+        category_id: cat.id,
+        amount: rand(15, 80),
+        spent_on: `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+        description: `${cat.name} — gasto del ${day}/${m + 1}`,
+        method: expenseMethod(),
+      });
+    }
+    if (isCurrentMonth) {
+      const cat = pick(categories);
+      expenseInserts.push({
+        category_id: cat.id,
+        amount: rand(15, 40),
+        spent_on: `${y}-${String(m + 1).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}`,
+        description: `${cat.name} — gasto de hoy`,
+        method: "cash",
+      });
+    }
+    const { error: expErr } = await db.from("expenses").insert(expenseInserts);
+    die("insert expenses", expErr);
+    totalExpenses += expenseInserts.length;
   }
-  // Guarantee a couple of cash expenses for today's caja.
-  for (let i = 0; i < 2; i++) {
-    const cat = pick(categories);
-    expenseInserts.push({
-      category_id: cat.id,
-      amount: rand(5, 40) * 1000,
-      spent_on: `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}`,
-      description: `${cat.name} — gasto de hoy`,
-      method: "cash",
-    });
-  }
-  const { error: expErr } = await db.from("expenses").insert(expenseInserts);
-  die("insert expenses", expErr);
-  console.log(`• ${expenseInserts.length} expenses`);
+
+  console.log(`• ${totalAppointments} appointments (${totalCompleted} completed) across 3 months`);
+  console.log(`• ${saleCount} sales, ${paymentCount} payments across 3 months`);
+  console.log(`• ${totalExpenses} expenses across 3 months`);
 
   // 9. Caja diaria: an open session for today plus a couple of movements, and
   //    yesterday closed so /caja has history. Needs a staff row (catalog,
@@ -392,7 +426,7 @@ async function main() {
         .from("cash_sessions")
         .insert({
           business_date: baDate(todayDay - 1),
-          opening_amount: 15000,
+          opening_amount: 250,
           opened_by: staffRow.id,
         })
         .select("id")
@@ -402,7 +436,7 @@ async function main() {
         .from("cash_sessions")
         .update({
           status: "closed",
-          counted_amount: round2(15000 + rand(-2, 4) * 1000),
+          counted_amount: round2(250 + rand(-20, 40)),
           closed_by: staffRow.id,
           closing_note: "Cierre del día anterior",
         })
@@ -414,7 +448,7 @@ async function main() {
       .from("cash_sessions")
       .insert({
         business_date: baDate(todayDay),
-        opening_amount: 20000,
+        opening_amount: 300,
         opened_by: staffRow.id,
       })
       .select("id")
@@ -422,9 +456,9 @@ async function main() {
     die("insert today cash_session", sessionErr);
 
     const movements = [
-      { kind: "retiro", direction: "out", amount: 5000, reason: "Pago a cadete" },
-      { kind: "ingreso", direction: "in", amount: 3000, reason: "Aporte de socia" },
-      { kind: "ajuste", direction: "out", amount: 500, reason: "Redondeo de caja" },
+      { kind: "retiro", direction: "out", amount: 80, reason: "Pago a cadete" },
+      { kind: "ingreso", direction: "in", amount: 50, reason: "Aporte de socia" },
+      { kind: "ajuste", direction: "out", amount: 10, reason: "Redondeo de caja" },
     ].map((m) => ({ ...m, session_id: session.id, created_by: staffRow.id }));
     const { error: movErr } = await db.from("cash_movements").insert(movements);
     die("insert cash_movements", movErr);

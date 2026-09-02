@@ -27,6 +27,26 @@ export async function getClientPackages(
   }));
 }
 
+export type ClientPaymentRow = { amount: number; paidAt: string; method: string };
+
+/** A client's payments across all their sales — feeds the ficha timeline (PASO 7). */
+export async function getClientPayments(
+  supabase: AppSupabaseClient,
+  clientId: string,
+): Promise<ClientPaymentRow[]> {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("amount, paid_at, method, sales!inner(client_id)")
+    .eq("sales.client_id", clientId);
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    amount: row.amount,
+    paidAt: row.paid_at,
+    method: row.method,
+  }));
+}
+
 export type ClientAppointmentRow = {
   id: string;
   zoneName: string;

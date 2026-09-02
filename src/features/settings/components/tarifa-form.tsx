@@ -15,6 +15,7 @@ import { SIZE_LABEL, SIZE_ORDER } from "@/features/packages/domain/tariff-picker
 import { GENDER_LABEL } from "@/features/packages/domain/tariff-picker";
 import {
   TARIFA_GENDERS,
+  TARIFA_VAT_DEFAULT,
   type TarifaGender,
   type TarifaSize,
 } from "@/features/settings/schema";
@@ -118,7 +119,7 @@ export function TarifaForm({
         <input type="hidden" name="sizeCategory" value={size} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="sessionPrice">Precio por sesión</Label>
           <Input
@@ -142,6 +143,25 @@ export function TarifaForm({
             defaultValue={tarifa?.bonoPrice}
             required
           />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="vatPercent">IVA (%)</Label>
+          <Input
+            id="vatPercent"
+            name="vatPercent"
+            type="number"
+            min={0}
+            max={99.9}
+            step="0.1"
+            defaultValue={
+              tarifa
+                ? Math.round(tarifa.vatRate * 1000) / 10
+                : TARIFA_VAT_DEFAULT * 100
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            0 = exento. Los precios ya incluyen IVA.
+          </p>
         </div>
       </div>
 

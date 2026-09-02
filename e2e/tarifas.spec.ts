@@ -39,10 +39,13 @@ test("tarifas ABM: add a tariff for a new zone, see it listed, archive it", asyn
     await page.getByRole("option", { name: "Mini" }).click();
     await page.getByLabel("Precio por sesión").fill("7");
     await page.getByLabel("Precio del bono").fill("36");
+    await page.getByLabel("IVA (%)").fill("10.5");
     await page.getByRole("button", { name: "Crear tarifa" }).click();
 
     await expect(page).toHaveURL(/\/configuracion\/tarifas(\?|$)/);
     await expect(page.getByRole("cell", { name: zoneName })).toBeVisible();
+    const row = page.getByRole("row", { name: new RegExp(zoneName) });
+    await expect(row.getByRole("cell", { name: "10.5%" })).toBeVisible();
   });
 
   await test.step("archive the tariff", async () => {

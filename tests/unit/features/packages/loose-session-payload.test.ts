@@ -6,6 +6,7 @@ const base = {
   templateName: "Axilas",
   zoneName: "Axilas",
   sessionPrice: 10,
+  vatRate: 0.21,
 };
 
 describe("buildLooseSessionPayload", () => {
