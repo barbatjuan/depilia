@@ -1,10 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ClientFormState } from "@/features/clients/actions/create-client";
 import type { ClientRow } from "@/features/clients/data/clients";
 
@@ -22,13 +29,12 @@ export function ClientForm({
   client?: ClientRow;
   submitLabel: string;
 }) {
-  const [state, formAction, isPending] = useActionState(
-    action,
-    initialState,
-  );
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [gender, setGender] = useState(client?.gender ?? "");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="gender" value={gender} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="firstName">Nombre</Label>
@@ -49,6 +55,18 @@ export function ClientForm({
           />
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="clientGender">Sexo</Label>
+          <Select value={gender} onValueChange={setGender}>
+            <SelectTrigger id="clientGender" className="w-full">
+              <SelectValue placeholder="Elegí" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mujer">Mujer</SelectItem>
+              <SelectItem value="hombre">Hombre</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="phone">Teléfono</Label>
           <Input
             id="phone"
@@ -57,7 +75,7 @@ export function ClientForm({
             autoComplete="tel"
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:col-span-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"

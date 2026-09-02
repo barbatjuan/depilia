@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { clientSchema } from "@/features/clients/schema";
 
 describe("clientSchema", () => {
-  it("accepts a client with first/last name and phone contact", () => {
+  it("accepts a client with first/last name, sex and phone contact", () => {
     const result = clientSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
+      gender: "mujer",
       phone: "1122334455",
       email: "",
       notes: "",
@@ -18,6 +19,7 @@ describe("clientSchema", () => {
     const result = clientSchema.safeParse({
       firstName: "Luz",
       lastName: "Pérez",
+      gender: "mujer",
       phone: "",
       email: "luz@example.com",
       notes: "",
@@ -26,10 +28,26 @@ describe("clientSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects a missing sex", () => {
+    const result = clientSchema.safeParse({
+      firstName: "Ana",
+      lastName: "García",
+      phone: "1122334455",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.gender).toContain(
+        "Elegí el sexo del cliente.",
+      );
+    }
+  });
+
   it("rejects a missing first name", () => {
     const result = clientSchema.safeParse({
       firstName: "",
       lastName: "García",
+      gender: "mujer",
       phone: "1122334455",
     });
 
@@ -45,6 +63,7 @@ describe("clientSchema", () => {
     const result = clientSchema.safeParse({
       firstName: "Ana",
       lastName: "",
+      gender: "mujer",
       phone: "1122334455",
     });
 
@@ -60,6 +79,7 @@ describe("clientSchema", () => {
     const result = clientSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
+      gender: "mujer",
       phone: "",
       email: "",
     });
@@ -76,6 +96,7 @@ describe("clientSchema", () => {
     const result = clientSchema.safeParse({
       firstName: "Ana",
       lastName: "García",
+      gender: "mujer",
       phone: "",
       email: "not-an-email",
     });

@@ -10,6 +10,9 @@ export const clientSchema = z
   .object({
     firstName: z.string().min(1, "El nombre es obligatorio"),
     lastName: z.string().min(1, "El apellido es obligatorio"),
+    gender: z.enum(["mujer", "hombre"], {
+      errorMap: () => ({ message: "Elegí el sexo del cliente." }),
+    }),
     phone: z.string().optional().default(""),
     email: z
       .union([z.literal(""), z.string().email("Email inválido")])

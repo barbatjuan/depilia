@@ -5,16 +5,21 @@ export type ClientRow = {
   id: string;
   firstName: string;
   lastName: string;
+  gender: string | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
   createdAt: string;
 };
 
+const CLIENT_COLUMNS =
+  "id, first_name, last_name, gender, phone, email, notes, created_at";
+
 function toClientRow(row: {
   id: string;
   first_name: string;
   last_name: string;
+  gender: string | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
@@ -24,6 +29,7 @@ function toClientRow(row: {
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,
+    gender: row.gender,
     phone: row.phone,
     email: row.email,
     notes: row.notes,
@@ -41,7 +47,7 @@ export async function listClients(
 ): Promise<ClientRow[]> {
   let query = supabase
     .from("clients")
-    .select("id, first_name, last_name, phone, email, notes, created_at")
+    .select(CLIENT_COLUMNS)
     .is("archived_at", null)
     .order("last_name", { ascending: true });
 
@@ -64,7 +70,7 @@ export async function getClient(
 ): Promise<ClientRow | null> {
   const { data, error } = await supabase
     .from("clients")
-    .select("id, first_name, last_name, phone, email, notes, created_at")
+    .select(CLIENT_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -80,11 +86,12 @@ export async function createClient(
     .insert({
       first_name: input.firstName,
       last_name: input.lastName,
+      gender: input.gender,
       phone: input.phone || null,
       email: input.email || null,
       notes: input.notes || null,
     })
-    .select("id, first_name, last_name, phone, email, notes, created_at")
+    .select(CLIENT_COLUMNS)
     .single();
   if (error) throw error;
   return toClientRow(data);
@@ -100,12 +107,13 @@ export async function updateClient(
     .update({
       first_name: input.firstName,
       last_name: input.lastName,
+      gender: input.gender,
       phone: input.phone || null,
       email: input.email || null,
       notes: input.notes || null,
     })
     .eq("id", id)
-    .select("id, first_name, last_name, phone, email, notes, created_at")
+    .select(CLIENT_COLUMNS)
     .single();
   if (error) throw error;
   return toClientRow(data);

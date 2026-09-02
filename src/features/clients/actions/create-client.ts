@@ -20,6 +20,7 @@ export async function createClientAction(
   const parsed = clientSchema.safeParse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
+    gender: formData.get("gender"),
     phone: formData.get("phone"),
     email: formData.get("email"),
     notes: formData.get("notes"),
